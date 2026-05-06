@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+const version = "1.0.0"
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{
 		"status":  "ok",
