@@ -239,20 +239,26 @@ export async function fetchShifts(): Promise<Shift[]> {
 }
 
 /** POST /shifts */
-export async function createShift(
-  shift: Shift,
-  locationId: number,
-): Promise<Shift> {
+export async function createShift({
+  shift,
+  locationId,
+}: {
+  shift: Shift;
+  locationId: number;
+}): Promise<Shift> {
   const body = shiftToApiBody(shift, locationId);
   const { data } = await client.post<ShiftApiRecord>("/shifts", body);
   return apiRecordToShift(data as Record<string, unknown>);
 }
 
 /** PUT /shifts/:id */
-export async function updateShift(
-  shift: Shift,
-  locationId: number,
-): Promise<Shift> {
+export async function updateShift({
+  shift,
+  locationId,
+}: {
+  shift: Shift;
+  locationId: number;
+}): Promise<Shift> {
   const body = shiftToApiBody(shift, locationId);
   const { data } = await client.put<ShiftApiRecord>(
     `/shifts/${shift.id}`,
