@@ -78,7 +78,9 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
         setDate(new Date(shift.date));
         setTimeStart(parseTimeStringToDate(shift.timeStart));
         setTimeEnd(parseTimeStringToDate(shift.timeEnd));
-        const matchedLocation = locationOptions.find((option) => option.label === shift.location);
+        const matchedLocation =
+            locationOptions.find((option) => option.value === shift.locationId) ??
+            locationOptions.find((option) => option.label === shift.location);
         setLocationId(matchedLocation ? matchedLocation.value : "");
         setSelectedUserNames([...shift.userNames]);
     }, [shiftId, shiftsContext.shifts, locationOptions]);
@@ -93,6 +95,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             date,
             timeStart: format(timeStart, "HH:mm"),
             timeEnd: format(timeEnd, "HH:mm"),
+            locationId,
             location: locationOptions.find((option) => option.value === locationId)?.label ?? "",
             userNames: selectedUserNames,
         };
