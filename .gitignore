@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Go
+backend/bin/
+backend/tmp/
+*.exe
+
+# env files
+.env
+.env.local
+frontend/.env
+backend/.env
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
