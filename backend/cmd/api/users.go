@@ -8,6 +8,7 @@ import (
 	"valet-backend-go/internal/repository"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CreateUserPayload struct {
@@ -37,11 +38,17 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
 	user := &repository.User{
 		FirstName: payload.FirstName,
 		LastName:  payload.LastName,
 		Email:     payload.Email,
-		Password:  payload.Password,
+		Password:  string(hashedPassword),
 		Role:      payload.Role,
 	}
 	ctx := r.Context()
@@ -112,8 +119,19 @@ func (app *application) updateUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var hashedPassword *string
+	if payload.Password != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*payload.Password), bcrypt.DefaultCost)
+		if err != nil {
+			app.internalServerError(w, r, err)
+			return
+		}
+		h := string(hash)
+		hashedPassword = &h
+	}
+
 	ctx := r.Context()
-	err = app.repository.Users.Update(ctx, id, payload.Role, payload.FirstName, payload.LastName, payload.Email, payload.Password)
+	err = app.repository.Users.Update(ctx, id, payload.Role, payload.FirstName, payload.LastName, payload.Email, hashedPassword)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):

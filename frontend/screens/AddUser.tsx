@@ -45,7 +45,9 @@ export default function AddUser() {
       Alert.alert("Validation", "Enter a valid email address.");
       return;
     }
-    if (password.length < 8) {
+    const normalizedPassword = password.trim();
+
+    if (normalizedPassword.length < 8) {
       Alert.alert("Validation", "Password must be at least 8 characters.");
       return;
     }
@@ -57,7 +59,7 @@ export default function AddUser() {
         first_name: trimmedFirstName,
         last_name: trimmedLastName,
         email: trimmedEmail,
-        password,
+        password: normalizedPassword,
       });
       Alert.alert("Saved", "User created successfully.", [
         { text: "OK", onPress: () => navigation.goBack() },
