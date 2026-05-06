@@ -17,6 +17,7 @@ import IconButton from './components/UI/IconButton';
 import type { BottomTabParamList, RootStackParamList } from './types';
 import { ShiftContextProvider } from './store/ShiftContext';
 import { runSilentHealthCheck } from './util/shiftsApi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,6 +62,8 @@ function BottomTabsNavigator() {
     </BottomTabs.Navigator>
   );
 }
+const queryClient = new QueryClient();
+
 export default function App() {
   useEffect(() => {
     runSilentHealthCheck();
@@ -69,8 +72,9 @@ export default function App() {
   return (
     <>
       <StatusBar style="auto" />
-      <ShiftContextProvider>
-        <NavigationContainer>
+      <QueryClientProvider client={queryClient}>
+        <ShiftContextProvider>
+          <NavigationContainer>
           <Stack.Navigator screenOptions={{ contentStyle: { backgroundColor: GlobalStyles.colors.background }, headerTintColor: GlobalStyles.colors.background, headerStyle: { backgroundColor: GlobalStyles.colors.maroon600 } }}>
             <Stack.Screen name="BottomTabs" component={BottomTabsNavigator} options={{ headerShown: false }} />
 
@@ -81,8 +85,9 @@ export default function App() {
 
 
           </Stack.Navigator>
-        </NavigationContainer>
-      </ShiftContextProvider>
+          </NavigationContainer>
+        </ShiftContextProvider>
+      </QueryClientProvider>
     </>
   );
 }
