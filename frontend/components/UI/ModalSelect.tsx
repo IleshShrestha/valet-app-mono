@@ -13,6 +13,7 @@ type ModalSelectProps = {
     options: ModalSelectOption[];
     placeholder?: string;
     maxVisibleOptions?: number;
+    searchPlaceholder?: string;
 };
 
 export default function ModalSelect({
@@ -21,6 +22,7 @@ export default function ModalSelect({
     options,
     placeholder = "Search or select",
     maxVisibleOptions = 5,
+    searchPlaceholder = "Type to filter options...",
 }: ModalSelectProps) {
     const computedMaxHeight = Math.max(180, maxVisibleOptions * 52);
 
@@ -40,7 +42,7 @@ export default function ModalSelect({
                 labelField="label"
                 valueField="value"
                 placeholder={placeholder}
-                searchPlaceholder="Type to filter locations..."
+                searchPlaceholder={searchPlaceholder}
                 value={value || null}
                 onChange={(item: ModalSelectOption) => onChange(item.value)}
                 autoScroll={false}
