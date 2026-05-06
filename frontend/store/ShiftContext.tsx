@@ -43,26 +43,14 @@ export function ShiftContextProvider({ children }: { children: ReactNode }) {
   });
 
   const addShiftMutation = useMutation({
-    mutationFn: ({
-      shift,
-      locationId,
-    }: {
-      shift: Shift;
-      locationId: number;
-    }) => createShiftApi(shift, locationId),
+    mutationFn: createShiftApi,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SHIFT_QUERY_KEY });
     },
   });
 
   const updateShiftMutation = useMutation({
-    mutationFn: ({
-      shift,
-      locationId,
-    }: {
-      shift: Shift;
-      locationId: number;
-    }) => updateShiftApi(shift, locationId),
+    mutationFn: updateShiftApi,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SHIFT_QUERY_KEY });
     },
@@ -79,12 +67,12 @@ export function ShiftContextProvider({ children }: { children: ReactNode }) {
     await shiftsQuery.refetch();
   }
 
-  async function addShift(shift: Shift, locationId: number) {
-    await addShiftMutation.mutateAsync({ shift, locationId });
+  async function addShift(shift: Shift) {
+    await addShiftMutation.mutateAsync(shift);
   }
 
-  async function updateShift(shift: Shift, locationId: number) {
-    await updateShiftMutation.mutateAsync({ shift, locationId });
+  async function updateShift(shift: Shift) {
+    await updateShiftMutation.mutateAsync(shift);
   }
 
   async function deleteShift(id: string) {
