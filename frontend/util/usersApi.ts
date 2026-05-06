@@ -1,11 +1,4 @@
-import axios from "axios";
-import { SHIFTS_API_BASE } from "./shiftsApi";
-
-const client = axios.create({
-  baseURL: SHIFTS_API_BASE,
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-});
+import { apiClient } from "./apiClient";
 
 export type CreateUserPayload = {
   role: "worker" | "manager" | "admin";
@@ -17,6 +10,5 @@ export type CreateUserPayload = {
 
 /** POST /users/ */
 export async function createUser(payload: CreateUserPayload): Promise<unknown> {
-  const { data } = await client.post<unknown>("/users/", payload);
-  return data;
+  return apiClient.post<unknown>("/users/", payload);
 }

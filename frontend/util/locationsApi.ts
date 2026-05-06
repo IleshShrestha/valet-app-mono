@@ -1,11 +1,4 @@
-import axios from "axios";
-import { SHIFTS_API_BASE } from "./shiftsApi";
-
-const client = axios.create({
-  baseURL: SHIFTS_API_BASE,
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-});
+import { apiClient } from "./apiClient";
 
 export type CreateLocationPayload = {
   name: string;
@@ -18,6 +11,5 @@ export type CreateLocationPayload = {
 export async function createLocation(
   payload: CreateLocationPayload,
 ): Promise<unknown> {
-  const { data } = await client.post<unknown>("/locations/", payload);
-  return data;
+  return apiClient.post<unknown>("/locations/", payload);
 }

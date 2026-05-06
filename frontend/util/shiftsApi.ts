@@ -1,11 +1,4 @@
-import axios from "axios";
 import type { Shift } from "../types";
-
-/**
- * Base URL for shift CRUD (no trailing slash).
- * Set `EXPO_PUBLIC_API_URL` in `.env` (Expo inlines `EXPO_PUBLIC_*` at build time).
- */
-export const SHIFTS_API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 /** Raw shift JSON from the API (supports camelCase from Go json tags + legacy keys). */
 type ShiftApiRecord = Record<string, unknown>;
@@ -27,11 +20,10 @@ const FALLBACK_USER_OPTIONS: UserPickerOption[] = [
   { label: "Taylor Morgan", value: "Taylor Morgan" },
 ];
 
-const client = axios.create({
-  baseURL: SHIFTS_API_BASE,
-  timeout: 15000,
-  headers: { "Content-Type": "application/json" },
-});
+import { API_BASE_URL } from "../config/api";
+import { apiClient } from "./apiClient";
+
+export const SHIFTS_API_BASE = API_BASE_URL;
 
 function strFromRecord(r: Record<string, unknown>, ...keys: string[]): string {
   for (const k of keys) {
@@ -213,7 +205,7 @@ function locationOptionsFromPayload(data: unknown): LocationPickerOption[] {
 /** GET /users/ — all users for the team member picker. */
 export async function fetchUserPickerOptions(): Promise<UserPickerOption[]> {
   try {
-    const { data } = await client.get<unknown>("/users/");
+    const data = await apiClient.get<unknown>("/users/");
     const raw = unwrapUserList(data);
     if (raw.length === 0) return FALLBACK_USER_OPTIONS;
 
@@ -231,7 +223,7 @@ export async function fetchLocationPickerOptions(): Promise<
   LocationPickerOption[]
 > {
   try {
-    const { data } = await client.get<unknown>("/shifts/locations");
+    const data = await apiClient.get<unknown>("/shifts/locations");
     return locationOptionsFromPayload(data);
   } catch {
     return [];
@@ -240,7 +232,7 @@ export async function fetchLocationPickerOptions(): Promise<
 
 /** GET /shifts */
 export async function fetchShifts(): Promise<Shift[]> {
-  const { data } = await client.get<unknown>("/shifts");
+  const data = await apiClient.get<unknown>("/shifts");
   const shifts = unwrapShiftList(data).map((row) =>
     apiRecordToShift(row as Record<string, unknown>),
   );
@@ -264,7 +256,7 @@ export async function createShift({
   locationId: number;
 }): Promise<Shift> {
   const body = shiftToApiBody(shift, locationId);
-  const { data } = await client.post<ShiftApiRecord>("/shifts", body);
+  const data = await apiClient.post<ShiftApiRecord>("/shifts", body);
   return apiRecordToShift(data as Record<string, unknown>);
 }
 
@@ -277,16 +269,13 @@ export async function updateShift({
   locationId: number;
 }): Promise<Shift> {
   const body = shiftToApiBody(shift, locationId);
-  const { data } = await client.put<ShiftApiRecord>(
-    `/shifts/${shift.id}`,
-    body,
-  );
+  const data = await apiClient.put<ShiftApiRecord>(`/shifts/${shift.id}`, body);
   return apiRecordToShift(data as Record<string, unknown>);
 }
 
 /** DELETE /shifts/:id */
 export async function deleteShift(id: string): Promise<void> {
-  await client.delete(`/shifts/${id}`);
+  await apiClient.delete(`/shifts/${id}`);
 }
 
 export type ShiftLocationGateResponse = {
@@ -302,8 +291,6 @@ function parseLocationGateResponse(data: unknown): ShiftLocationGateResponse {
 
   const allowed = Boolean(d.inside_geofence);
   const distanceMeters = d.distance_meters;
-  console.log("allowed", allowed);
-  console.log("distanceMeters", distanceMeters);
   return { allowed, distanceMeters };
 }
 
@@ -319,18 +306,15 @@ export async function postShiftCheckLocation(
   longitude: number,
   locationId: number,
 ): Promise<ShiftLocationGateResponse> {
-  const { data } = await client.post<ApiEnvelope<ShiftLocationGateApi>>(
-    "/shifts/check-location",
-    {
-      user_latitude: latitude,
-      user_longitude: longitude,
-      location_id: locationId,
-    },
-  );
+  const data = await apiClient.post<ApiEnvelope<ShiftLocationGateApi>>("/shifts/check-location", {
+    user_latitude: latitude,
+    user_longitude: longitude,
+    location_id: locationId,
+  });
 
   return parseLocationGateResponse(data.data);
 }
 
 export function runSilentHealthCheck(): void {
-  void client.get("/health", { timeout: 5000 }).catch(() => undefined);
+  void apiClient.get("/health", { skipAuthRefresh: true }).catch(() => undefined);
 }
