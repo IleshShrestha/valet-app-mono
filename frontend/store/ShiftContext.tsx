@@ -17,8 +17,8 @@ export type ShiftContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshShifts: () => Promise<void>;
-  addShift: (shift: Shift) => Promise<void>;
-  updateShift: (shift: Shift) => Promise<void>;
+  addShift: (shift: Shift, locationId: number) => Promise<void>;
+  updateShift: (shift: Shift, locationId: number) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
 };
 
@@ -27,8 +27,8 @@ export const ShiftContext = createContext<ShiftContextValue>({
   isLoading: false,
   error: null,
   refreshShifts: async () => {},
-  addShift: async () => {},
-  updateShift: async () => {},
+  addShift: async (_shift: Shift, _locationId: number) => {},
+  updateShift: async (_shift: Shift, _locationId: number) => {},
   deleteShift: async () => {},
 });
 
