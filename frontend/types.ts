@@ -6,6 +6,7 @@ export interface Shift {
     date: Date;
     timeStart: string;
     timeEnd: string;
+    locationId: string;
     location: string;
 
     userNames: string[];

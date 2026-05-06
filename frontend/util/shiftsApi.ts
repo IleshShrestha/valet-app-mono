@@ -47,6 +47,12 @@ function idFromRecord(r: Record<string, unknown>): string {
   return String(v);
 }
 
+function locationIdFromRecord(r: Record<string, unknown>): string {
+  const v = r.location_id ?? r.locationId ?? r.LocationID;
+  if (v == null) return "";
+  return String(v);
+}
+
 /** Normalize "12:00:00" or "12:00" → "12:00" for UI + Shift type. */
 function normalizeTimeToHHmm(t: string): string {
   const parts = t.trim().split(":");
@@ -120,6 +126,7 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
   const location = strFromRecord(r, "location", "Location");
 
   const usersVal = r.users ?? r.Users;
+  const locationId = locationIdFromRecord(r);
 
   return {
     id: idFromRecord(r),
@@ -127,6 +134,7 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
     date: dateStr ? new Date(dateStr) : new Date(),
     timeStart: normalizeTimeToHHmm(startRaw || "00:00:00"),
     timeEnd: normalizeTimeToHHmm(endRaw || "00:00:00"),
+    locationId,
     location,
     userNames: parseUsersFromApi(usersVal),
   };
@@ -233,9 +241,18 @@ export async function fetchLocationPickerOptions(): Promise<
 /** GET /shifts */
 export async function fetchShifts(): Promise<Shift[]> {
   const { data } = await client.get<unknown>("/shifts");
-  return unwrapShiftList(data).map((row) =>
+  const shifts = unwrapShiftList(data).map((row) =>
     apiRecordToShift(row as Record<string, unknown>),
   );
+
+  const locations = await fetchLocationPickerOptions();
+  if (locations.length === 0) return shifts;
+
+  const locationNameById = new Map(locations.map((loc) => [loc.value, loc.label]));
+  return shifts.map((shift) => ({
+    ...shift,
+    location: shift.location || locationNameById.get(shift.locationId) || "",
+  }));
 }
 
 /** POST /shifts */
