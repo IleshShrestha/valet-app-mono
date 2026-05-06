@@ -14,6 +14,12 @@ export default function Settings() {
             ?.navigate("AddLocation");
     }
 
+    function openAddUser() {
+        navigation
+            .getParent<NativeStackNavigationProp<RootStackParamList>>()
+            ?.navigate("AddUser");
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Settings</Text>
@@ -21,6 +27,12 @@ export default function Settings() {
                 <Button
                     title="Add location"
                     onPress={openAddLocation}
+                    mode="filled"
+                    style={styles.button}
+                />
+                <Button
+                    title="Add user"
+                    onPress={openAddUser}
                     mode="filled"
                     style={styles.button}
                 />
@@ -43,6 +55,7 @@ const styles = StyleSheet.create({
     },
     buttonWrap: {
         alignItems: "stretch",
+        gap: 10,
     },
     button: {
         alignSelf: "stretch",

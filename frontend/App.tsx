@@ -9,6 +9,7 @@ import Loading from './screens/Loading';
 import Login from './screens/Login';
 import Settings from './screens/Settings';
 import AddLocation from './screens/AddLocation';
+import AddUser from './screens/AddUser';
 import ShiftDetails from './screens/ShiftDetails';
 import ShiftList from './screens/ShiftList';
 
@@ -80,6 +81,7 @@ export default function App() {
 
             <Stack.Screen name="ShiftDetails" component={ShiftDetails} options={{ presentation: 'modal' }} />
             <Stack.Screen name="AddLocation" component={AddLocation} options={{ presentation: 'modal', title: 'Add location' }} />
+            <Stack.Screen name="AddUser" component={AddUser} options={{ presentation: 'modal', title: 'Add user' }} />
             <Stack.Screen name="Login" component={Login} />
 
 

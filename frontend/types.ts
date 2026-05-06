@@ -15,6 +15,7 @@ export type RootStackParamList = {
     BottomTabs: undefined;
     ShiftDetails: { shiftId?: string };
     AddLocation: undefined;
+    AddUser: undefined;
     Login: undefined;
 };
 
