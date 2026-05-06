@@ -15,8 +15,10 @@ export type UserPickerOption = {
   value: string;
 };
 
-/** Same shape as `UserPickerOption`, for location dropdowns. */
-export type LocationPickerOption = UserPickerOption;
+export type LocationPickerOption = {
+  label: string;
+  value: string;
+};
 
 const FALLBACK_USER_OPTIONS: UserPickerOption[] = [
   { label: "Alex Rivera", value: "Alex Rivera" },
@@ -130,21 +132,21 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
   };
 }
 
-/** Sent as `location` on POST /shifts and PUT /shifts/:id (fixed site id). */
-const SHIFT_CREATE_UPDATE_LOCATION_ID = 2;
-
 /**
  * Request body JSON tags from Go:
  * title, date, start_time, end_time, location (all required).
  */
-function shiftToApiBody(shift: Shift): Record<string, unknown> {
+function shiftToApiBody(
+  shift: Shift,
+  locationId: number,
+): Record<string, unknown> {
   const d = shift.date instanceof Date ? shift.date : new Date(shift.date);
   return {
     title: shift.title,
     date: d.toISOString(),
     start_time: hhmmToApiTime(shift.timeStart),
     end_time: hhmmToApiTime(shift.timeEnd),
-    location_id: SHIFT_CREATE_UPDATE_LOCATION_ID,
+    location_id: locationId,
   };
 }
 
@@ -170,29 +172,32 @@ function unwrapUserList(data: unknown): unknown[] {
   return [];
 }
 
-function locationStringsFromPayload(data: unknown): string[] {
+function locationOptionsFromPayload(data: unknown): LocationPickerOption[] {
   if (data == null) return [];
   if (Array.isArray(data)) {
     return data
       .map((item) => {
-        if (typeof item === "string") return item.trim();
         if (item && typeof item === "object") {
           const o = item as Record<string, unknown>;
-          if (typeof o.title === "string") return o.title.trim();
-          if (typeof o.name === "string") return o.name.trim();
-          if (typeof o.location === "string") return o.location.trim();
-          if (typeof o.value === "string") return o.value.trim();
+          const id = o.id;
+          const name = o.name;
+          if (
+            (typeof id === "number" || typeof id === "string") &&
+            typeof name === "string" &&
+            name.trim()
+          ) {
+            return { label: name.trim(), value: String(id) };
+          }
         }
-        return "";
+        return null;
       })
-      .filter(Boolean);
+      .filter((item): item is LocationPickerOption => item !== null);
   }
   if (typeof data === "object") {
     const o = data as Record<string, unknown>;
-    if (Array.isArray(o.locations))
-      return locationStringsFromPayload(o.locations);
-    if (Array.isArray(o.data)) return locationStringsFromPayload(o.data);
-    if (Array.isArray(o.results)) return locationStringsFromPayload(o.results);
+    if (Array.isArray(o.locations)) return locationOptionsFromPayload(o.locations);
+    if (Array.isArray(o.data)) return locationOptionsFromPayload(o.data);
+    if (Array.isArray(o.results)) return locationOptionsFromPayload(o.results);
   }
   return [];
 }
@@ -219,8 +224,7 @@ export async function fetchLocationPickerOptions(): Promise<
 > {
   try {
     const { data } = await client.get<unknown>("/shifts/locations");
-    const names = locationStringsFromPayload(data);
-    return names.map((n) => ({ label: n, value: n }));
+    return locationOptionsFromPayload(data);
   } catch {
     return [];
   }
@@ -235,15 +239,21 @@ export async function fetchShifts(): Promise<Shift[]> {
 }
 
 /** POST /shifts */
-export async function createShift(shift: Shift): Promise<Shift> {
-  const body = shiftToApiBody(shift);
+export async function createShift(
+  shift: Shift,
+  locationId: number,
+): Promise<Shift> {
+  const body = shiftToApiBody(shift, locationId);
   const { data } = await client.post<ShiftApiRecord>("/shifts", body);
   return apiRecordToShift(data as Record<string, unknown>);
 }
 
 /** PUT /shifts/:id */
-export async function updateShift(shift: Shift): Promise<Shift> {
-  const body = shiftToApiBody(shift);
+export async function updateShift(
+  shift: Shift,
+  locationId: number,
+): Promise<Shift> {
+  const body = shiftToApiBody(shift, locationId);
   const { data } = await client.put<ShiftApiRecord>(
     `/shifts/${shift.id}`,
     body,
@@ -284,13 +294,14 @@ type ApiEnvelope<T> = { data: T };
 export async function postShiftCheckLocation(
   latitude: number,
   longitude: number,
+  locationId: number,
 ): Promise<ShiftLocationGateResponse> {
   const { data } = await client.post<ApiEnvelope<ShiftLocationGateApi>>(
     "/shifts/check-location",
     {
       user_latitude: latitude,
       user_longitude: longitude,
-      location_id: SHIFT_CREATE_UPDATE_LOCATION_ID,
+      location_id: locationId,
     },
   );
 

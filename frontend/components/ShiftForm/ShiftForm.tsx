@@ -13,7 +13,7 @@ export type ShiftFormProps = {
     timeEnd: Date;
     location: string;
     locationOptions: LocationPickerOption[];
-    locationOptionsReady?: boolean;
+    locationOptionsReady: boolean;
     selectedUserNames: string[];
     userOptions: UserPickerOption[];
     onChangeTitle: (value: string) => void;
@@ -32,7 +32,7 @@ export default function ShiftForm({
     timeEnd,
     location,
     locationOptions,
-    locationOptionsReady = true,
+    locationOptionsReady,
     selectedUserNames,
     userOptions,
     onChangeTitle,

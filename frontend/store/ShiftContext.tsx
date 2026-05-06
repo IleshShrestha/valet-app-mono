@@ -1,11 +1,9 @@
+import { createContext, type ReactNode } from "react";
 import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useReducer,
-  useState,
-} from "react";
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { Shift } from "../types";
 import {
   createShift as createShiftApi,
@@ -19,8 +17,8 @@ export type ShiftContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshShifts: () => Promise<void>;
-  addShift: (shift: Shift) => Promise<void>;
-  updateShift: (shift: Shift) => Promise<void>;
+  addShift: (shift: Shift, locationId: number) => Promise<void>;
+  updateShift: (shift: Shift, locationId: number) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
 };
 
@@ -29,78 +27,74 @@ export const ShiftContext = createContext<ShiftContextValue>({
   isLoading: false,
   error: null,
   refreshShifts: async () => {},
-  addShift: async () => {},
-  updateShift: async () => {},
+  addShift: async (_shift: Shift, _locationId: number) => {},
+  updateShift: async (_shift: Shift, _locationId: number) => {},
   deleteShift: async () => {},
 });
 
-type ShiftAction =
-  | { type: "SET_SHIFTS"; payload: Shift[] }
-  | { type: "ADD"; payload: Shift }
-  | { type: "UPDATE"; payload: Shift }
-  | { type: "DELETE"; payload: string };
-
-function shiftReducer(state: Shift[], action: ShiftAction): Shift[] {
-  switch (action.type) {
-    case "SET_SHIFTS":
-      return action.payload;
-    case "ADD":
-      return [action.payload, ...state];
-    case "UPDATE":
-      return state.map((shift) =>
-        shift.id === action.payload.id ? action.payload : shift,
-      );
-    case "DELETE":
-      return state.filter((shift) => shift.id !== action.payload);
-    default:
-      return state;
-  }
-}
+const SHIFT_QUERY_KEY = ["shifts"] as const;
 
 export function ShiftContextProvider({ children }: { children: ReactNode }) {
-  const [shiftsState, dispatch] = useReducer(shiftReducer, []);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const refreshShifts = useCallback(async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const shifts = await fetchShifts();
-      dispatch({ type: "SET_SHIFTS", payload: shifts });
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Failed to load shifts";
-      setError(message);
-      dispatch({ type: "SET_SHIFTS", payload: [] });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const shiftsQuery = useQuery({
+    queryKey: SHIFT_QUERY_KEY,
+    queryFn: fetchShifts,
+  });
 
-  useEffect(() => {
-    refreshShifts();
-  }, [refreshShifts]);
+  const addShiftMutation = useMutation({
+    mutationFn: ({
+      shift,
+      locationId,
+    }: {
+      shift: Shift;
+      locationId: number;
+    }) => createShiftApi(shift, locationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SHIFT_QUERY_KEY });
+    },
+  });
 
-  async function addShift(shift: Shift) {
-    const created = await createShiftApi(shift);
-    dispatch({ type: "ADD", payload: created });
+  const updateShiftMutation = useMutation({
+    mutationFn: ({
+      shift,
+      locationId,
+    }: {
+      shift: Shift;
+      locationId: number;
+    }) => updateShiftApi(shift, locationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SHIFT_QUERY_KEY });
+    },
+  });
+
+  const deleteShiftMutation = useMutation({
+    mutationFn: deleteShiftApi,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: SHIFT_QUERY_KEY });
+    },
+  });
+
+  async function refreshShifts() {
+    await shiftsQuery.refetch();
   }
 
-  async function updateShift(shift: Shift) {
-    const updated = await updateShiftApi(shift);
-    dispatch({ type: "UPDATE", payload: updated });
+  async function addShift(shift: Shift, locationId: number) {
+    await addShiftMutation.mutateAsync({ shift, locationId });
+  }
+
+  async function updateShift(shift: Shift, locationId: number) {
+    await updateShiftMutation.mutateAsync({ shift, locationId });
   }
 
   async function deleteShift(id: string) {
-    await deleteShiftApi(id);
-    dispatch({ type: "DELETE", payload: id });
+    await deleteShiftMutation.mutateAsync(id);
   }
 
   const value: ShiftContextValue = {
-    shifts: shiftsState,
-    isLoading,
-    error,
+    shifts: shiftsQuery.data ?? [],
+    isLoading: shiftsQuery.isLoading,
+    error: shiftsQuery.error instanceof Error ? shiftsQuery.error.message : null,
     refreshShifts,
     addShift,
     updateShift,

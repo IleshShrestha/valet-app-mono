@@ -37,7 +37,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
     const [date, setDate] = useState(now);
     const [timeStart, setTimeStart] = useState(now);
     const [timeEnd, setTimeEnd] = useState(now);
-    const [location, setLocation] = useState("");
+    const [locationId, setLocationId] = useState("");
     const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
     const [userOptions, setUserOptions] = useState<UserPickerOption[]>([]);
     const [locationOptions, setLocationOptions] = useState<LocationPickerOption[]>([]);
@@ -78,9 +78,10 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
         setDate(new Date(shift.date));
         setTimeStart(parseTimeStringToDate(shift.timeStart));
         setTimeEnd(parseTimeStringToDate(shift.timeEnd));
-        setLocation(shift.location);
+        const matchedLocation = locationOptions.find((option) => option.label === shift.location);
+        setLocationId(matchedLocation ? matchedLocation.value : "");
         setSelectedUserNames([...shift.userNames]);
-    }, [shiftId, shiftsContext.shifts]);
+    }, [shiftId, shiftsContext.shifts, locationOptions]);
 
 
 
@@ -92,7 +93,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             date,
             timeStart: format(timeStart, "HH:mm"),
             timeEnd: format(timeEnd, "HH:mm"),
-            location,
+            location: locationOptions.find((option) => option.value === locationId)?.label ?? "",
             userNames: selectedUserNames,
         };
     }
@@ -108,7 +109,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
     }
 
     function handleLocationChange(next: string) {
-        setLocation(next);
+        setLocationId(next);
     }
 
     async function deleteShiftHandler() {
@@ -125,6 +126,11 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
 
     async function handleClockIn() {
         if (clockInInFlight.current) return;
+        const parsedLocationId = Number(locationId);
+        if (!Number.isFinite(parsedLocationId) || parsedLocationId <= 0) {
+            Alert.alert("Missing location", "Please select a valid location first.");
+            return;
+        }
         clockInInFlight.current = true;
         try {
             setClockInLoading(true);
@@ -132,6 +138,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             const data = await postShiftCheckLocation(
                 coords.latitude,
                 coords.longitude,
+                parsedLocationId,
             );
             const distancePhrase =
                 data.distanceMeters !== undefined
@@ -176,11 +183,16 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
 
     async function saveHandler() {
         const shift = buildShiftForSave();
+        const parsedLocationId = Number(locationId);
+        if (!Number.isFinite(parsedLocationId) || parsedLocationId <= 0) {
+            Alert.alert("Missing location", "Please select a valid location.");
+            return;
+        }
         try {
             if (isEditing) {
-                await shiftsContext.updateShift(shift);
+                await shiftsContext.updateShift(shift, parsedLocationId);
             } else {
-                await shiftsContext.addShift(shift);
+                await shiftsContext.addShift(shift, parsedLocationId);
             }
             navigation.goBack();
         } catch (e) {
@@ -209,7 +221,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
                     date={date}
                     timeStart={timeStart}
                     timeEnd={timeEnd}
-                    location={location}
+                    location={locationId}
                     locationOptions={locationOptions}
                     locationOptionsReady={locationOptionsReady}
                     selectedUserNames={selectedUserNames}
@@ -284,4 +296,3 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
     },
 });
-
