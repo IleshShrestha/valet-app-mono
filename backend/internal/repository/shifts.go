@@ -8,15 +8,15 @@ import (
 )
 
 type Shift struct {
-	ID          int64     `json:"id"`
-	Title       string    `json:"title"`
-	Users       []*User   `json:"users"`
-	Date        string    `json:"date"`
-	LocationID  int64     `json:"location_id"`
-	StartTime   string    `json:"start_time"`
-	EndTime     string    `json:"end_time"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID         int64     `json:"id"`
+	Title      string    `json:"title"`
+	Users      []*User   `json:"users"`
+	Date       string    `json:"date"`
+	LocationID int64     `json:"location_id"`
+	StartTime  string    `json:"start_time"`
+	EndTime    string    `json:"end_time"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type ShiftRepository struct {
