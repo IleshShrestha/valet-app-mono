@@ -67,12 +67,12 @@ export function ShiftContextProvider({ children }: { children: ReactNode }) {
     await shiftsQuery.refetch();
   }
 
-  async function addShift(shift: Shift) {
-    await addShiftMutation.mutateAsync(shift);
+  async function addShift(shift: Shift, locationId: number) {
+    await addShiftMutation.mutateAsync({ shift, locationId });
   }
 
-  async function updateShift(shift: Shift) {
-    await updateShiftMutation.mutateAsync(shift);
+  async function updateShift(shift: Shift, locationId: number) {
+    await updateShiftMutation.mutateAsync({ shift, locationId });
   }
 
   async function deleteShift(id: string) {

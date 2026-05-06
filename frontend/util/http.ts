@@ -4,8 +4,8 @@
 import type { Shift } from "../types";
 import { createShift } from "./shiftsApi";
 
-export function storeShift(shift: Shift) {
-  return createShift(shift);
+export function storeShift(shift: Shift, locationId: number) {
+  return createShift({ shift, locationId });
 }
 
 export {
