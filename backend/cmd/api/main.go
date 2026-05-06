@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"valet-backend-go/internal/auth"
 	"valet-backend-go/internal/database"
 	"valet-backend-go/internal/env"
 	"valet-backend-go/internal/repository"
@@ -9,44 +10,27 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const version = "0.0.1"
-
 func main() {
-	// loading environment vars
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+	_ = godotenv.Load()
+	cfg := config{addr: env.GetString("ADDR"), db: dbConfig{addr: env.GetString("DATABASE_URL"), maxOpenConns: env.GetInt("MAX_OPEN_CONNECTIONS"), maxIdleConns: env.GetInt("MAX_IDLE_CONNECTIONS"), maxIdleTime: env.GetString("MAX_IDLE_TIME")}, env: env.GetString("ENVIRONMENT"), auth: authConfig{jwtSecret: env.GetString("JWT_SECRET"), accessTokenTTLMinutes: env.GetInt("ACCESS_TOKEN_TTL_MINUTES"), refreshTokenTTLDays: env.GetInt("REFRESH_TOKEN_TTL_DAYS")}}
+	if cfg.auth.accessTokenTTLMinutes == 0 {
+		cfg.auth.accessTokenTTLMinutes = 15
 	}
-
-	cfg := config{
-		addr: env.GetString("ADDR"),
-		db: dbConfig{
-			addr:         env.GetString("DATABASE_URL"),
-			maxOpenConns: env.GetInt("MAX_OPEN_CONNECTIONS"),
-			maxIdleConns: env.GetInt("MAX_IDLE_CONNECTIONS"),
-			maxIdleTime:  env.GetString("MAX_IDLE_TIME"),
-		},
-		env: env.GetString("ENVIRONMENT"),
+	if cfg.auth.refreshTokenTTLDays == 0 {
+		cfg.auth.refreshTokenTTLDays = 30
 	}
-
-	// database connection
+	if cfg.env != "development" && cfg.auth.jwtSecret == "" {
+		log.Fatal("JWT_SECRET is required outside development")
+	}
+	if cfg.auth.jwtSecret == "" {
+		cfg.auth.jwtSecret = "local-dev-only-secret-change-me"
+	}
 	db, err := database.NewPool(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime)
 	if err != nil {
 		log.Panic("Failed to connect to database:", err)
 	}
-
 	defer db.Close()
-
-	log.Println("Connected to database with pools")
-	// repository instantiation
 	repo := repository.NewRepository(db)
-
-	// application configuration
-	app := &application{
-		config:     cfg,
-		repository: repo,
-	}
-	// mounting and running the application
-	mux := app.mount()
-
-	log.Fatal(app.run(mux))
+	app := &application{config: cfg, repository: repo, tokenManager: auth.NewTokenManager(cfg.auth.jwtSecret, cfg.auth.accessTokenTTLMinutes, cfg.auth.refreshTokenTTLDays)}
+	log.Fatal(app.run(app.mount()))
 }

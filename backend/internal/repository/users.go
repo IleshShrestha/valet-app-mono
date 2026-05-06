@@ -163,3 +163,16 @@ func (u *UserRepository) Delete(ctx context.Context, id int64) error {
 	}
 	return nil
 }
+
+func (u *UserRepository) GetByEmailWithPassword(ctx context.Context, email string) (*User, error) {
+	query := `SELECT id, role, email, password FROM users WHERE lower(email) = lower($1)`
+	var currentUser User
+	err := u.db.QueryRowContext(ctx, query, email).Scan(&currentUser.ID, &currentUser.Role, &currentUser.Email, &currentUser.Password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &currentUser, nil
+}
