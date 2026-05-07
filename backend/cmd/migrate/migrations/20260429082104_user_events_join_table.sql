@@ -8,7 +8,7 @@ ALTER TABLE shift_users
 
 -- Add useful assignment tracking columns
 ALTER TABLE shift_users
-    ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ,
+
     ADD COLUMN IF NOT EXISTS check_in_time TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS check_out_time TIMESTAMPTZ,
 
@@ -29,4 +29,3 @@ DROP INDEX IF EXISTS idx_shift_users_shift_id;
 ALTER TABLE shift_users
     DROP COLUMN IF EXISTS check_out_time,
     DROP COLUMN IF EXISTS check_in_time,
-    DROP COLUMN IF EXISTS confirmed_at,
