@@ -9,7 +9,17 @@ export interface Shift {
     locationId: string;
     location: string;
 
-    userNames: string[];
+    assignedUsers: AssignedUser[];
+}
+
+export interface AssignedUser {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    checkInTime?: string | null;
+    checkOutTime?: string | null;
 }
 
 export type RootStackParamList = {

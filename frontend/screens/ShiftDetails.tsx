@@ -82,7 +82,9 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             locationOptions.find((option) => option.value === shift.locationId) ??
             locationOptions.find((option) => option.label === shift.location);
         setLocationId(matchedLocation ? matchedLocation.value : "");
-        setSelectedUserNames([...shift.userNames]);
+        setSelectedUserNames(
+            shift.assignedUsers.map((user) => `${user.firstName} ${user.lastName}`.trim() || user.email),
+        );
         hydratedForShiftId.current = shiftId;
     }, [shiftId, shiftsContext.shifts, locationOptions]);
 
@@ -98,7 +100,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             timeEnd: format(timeEnd, "HH:mm"),
             locationId,
             location: locationOptions.find((option) => option.value === locationId)?.label ?? "",
-            userNames: selectedUserNames,
+            assignedUsers: [],
         };
     }
 

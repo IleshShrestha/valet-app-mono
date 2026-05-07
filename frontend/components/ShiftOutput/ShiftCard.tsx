@@ -27,6 +27,11 @@ export default function ShiftCard({ shift }: { shift: Shift }) {
     function shiftPressHandler() {
         navigation.navigate("ShiftDetails", { shiftId: shift.id });
     }
+    function getAssignmentStatus(user: Shift["assignedUsers"][number]): string {
+        if (user.checkOutTime) return "Completed";
+        if (user.checkInTime) return "Checked in";
+        return "Assigned";
+    }
 
     return (
         <Pressable onPress={shiftPressHandler} style={({ pressed }) => pressed && styles.pressed}>
@@ -40,14 +45,15 @@ export default function ShiftCard({ shift }: { shift: Shift }) {
                 <Text><MaterialCommunityIcons name="calendar-month" size={16} color={GlobalStyles.colors.maroon600} /> {formattedDate}</Text>
                 <Text><MaterialCommunityIcons name="clock-outline" size={16} color={GlobalStyles.colors.maroon600} /> {to12HourTime(shift.timeStart)} - {to12HourTime(shift.timeEnd)}</Text>
                 <Text><MaterialCommunityIcons name="map-marker" size={16} color={GlobalStyles.colors.maroon600} /> {shift.location}</Text>
-                {shift.userNames.length > 0 ? (
-                    <View style={styles.teamBlock}>
-                        <Text style={styles.teamLabel}>Team</Text>
-                        {shift.userNames.map((memberName) => (
-                            <Text key={memberName} style={styles.teamName}>• {memberName}</Text>
-                        ))}
-                    </View>
-                ) : null}
+                <View style={styles.teamBlock}>
+                    <Text style={styles.teamLabel}>Assigned</Text>
+                    {shift.assignedUsers.length > 0 ? shift.assignedUsers.map((member) => {
+                        const fullName = `${member.firstName} ${member.lastName}`.trim() || member.email;
+                        return (
+                            <Text key={member.id} style={styles.teamName}>• {fullName} — {getAssignmentStatus(member)}</Text>
+                        );
+                    }) : <Text style={styles.teamName}>No users assigned</Text>}
+                </View>
             </View>
         </Pressable>
     );

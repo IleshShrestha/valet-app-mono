@@ -1,4 +1,4 @@
-import type { Shift } from "../types";
+import type { AssignedUser, Shift } from "../types";
 
 /** Raw shift JSON from the API (supports camelCase from Go json tags + legacy keys). */
 type ShiftApiRecord = Record<string, unknown>;
@@ -82,19 +82,25 @@ function displayNameFromUserObject(o: Record<string, unknown>): string {
   return "";
 }
 
-function parseUsersFromApi(users: unknown): string[] {
-  if (users == null) return [];
+function parseAssignedUsersFromApi(users: unknown): AssignedUser[] {
   if (!Array.isArray(users)) return [];
-  return users
-    .map((u) => {
-      if (typeof u === "string") return u.trim();
-      if (u && typeof u === "object") {
-        const o = u as Record<string, unknown>;
-        return displayNameFromUserObject(o);
-      }
-      return "";
-    })
-    .filter(Boolean);
+  const assignedUsers: AssignedUser[] = [];
+  users.forEach((u) => {
+    if (!u || typeof u !== "object") return;
+    const o = u as Record<string, unknown>;
+    const id = Number(o.id);
+    if (!Number.isFinite(id)) return;
+    assignedUsers.push({
+      id,
+      firstName: strFromRecord(o, "first_name", "firstName", "FirstName"),
+      lastName: strFromRecord(o, "last_name", "lastName", "LastName"),
+      email: strFromRecord(o, "email", "Email"),
+      role: strFromRecord(o, "role", "Role"),
+      checkInTime: (o.check_in_time as string | null | undefined) ?? null,
+      checkOutTime: (o.check_out_time as string | null | undefined) ?? null,
+    });
+  });
+  return assignedUsers;
 }
 
 function pickerLabelFromUser(u: unknown, index: number): string {
@@ -117,8 +123,9 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
   const dateStr = strFromRecord(r, "date", "Date");
   const location = strFromRecord(r, "location", "Location");
 
-  const usersVal = r.users ?? r.Users;
+  const assignedUsersVal = r.assigned_users ?? r.assignedUsers ?? r.AssignedUsers;
   const locationId = locationIdFromRecord(r);
+  const assignedUsers = parseAssignedUsersFromApi(assignedUsersVal);
 
   return {
     id: idFromRecord(r),
@@ -128,7 +135,7 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
     timeEnd: normalizeTimeToHHmm(endRaw || "00:00:00"),
     locationId,
     location,
-    userNames: parseUsersFromApi(usersVal),
+    assignedUsers,
   };
 }
 
