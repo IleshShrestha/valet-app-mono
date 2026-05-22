@@ -61,11 +61,11 @@ func (app *application) mount() http.Handler {
 		})
 		r.Route("/shifts", func(r chi.Router) {
 			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createShiftHandler)
-			r.Get("/", app.getAllShiftsHandler)
+			r.With(app.requireAuth).Get("/", app.getAllShiftsHandler)
 			r.Get("/locations", app.getShiftLocationsHandler)
 			r.Post("/check-location", app.checkLocationHandler)
 			r.Route("/{shiftId}", func(r chi.Router) {
-				r.Get("/", app.getShiftHandler)
+				r.With(app.requireAuth).Get("/", app.getShiftHandler)
 				r.Put("/", app.updateShiftHandler)
 				r.Delete("/", app.deleteShiftHandler)
 			})

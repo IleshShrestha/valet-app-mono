@@ -21,6 +21,8 @@ import {
 } from "../util/shiftsApi";
 import { getCurrentLocation } from "../util/location";
 import axios from "axios";
+import { useAuth } from "../store/Authcontext";
+import { isWorker } from "../auth/permissions";
 
 
 
@@ -28,6 +30,10 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
 
     const shiftId = route.params?.shiftId;
     const isEditing = !!shiftId;
+    const { user } = useAuth();
+    const workerView = isWorker(user);
+    const canEditShift = !workerView;
+    const showClockIn = isEditing && workerView;
     const shiftsContext = useContext(ShiftContext);
     const selectedShiftId = isEditing ? shiftId! : "";
 
@@ -38,7 +44,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
     const [timeStart, setTimeStart] = useState(now);
     const [timeEnd, setTimeEnd] = useState(now);
     const [locationId, setLocationId] = useState("");
-    const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
     const [userOptions, setUserOptions] = useState<UserPickerOption[]>([]);
     const [locationOptions, setLocationOptions] = useState<LocationPickerOption[]>([]);
     const [locationOptionsReady, setLocationOptionsReady] = useState(false);
@@ -82,9 +88,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             locationOptions.find((option) => option.value === shift.locationId) ??
             locationOptions.find((option) => option.label === shift.location);
         setLocationId(matchedLocation ? matchedLocation.value : "");
-        setSelectedUserNames(
-            shift.assignedUsers.map((user) => `${user.firstName} ${user.lastName}`.trim() || user.email),
-        );
+        setSelectedUserIds(shift.assignedUsers.map((user) => String(user.id)));
         hydratedForShiftId.current = shiftId;
     }, [shiftId, shiftsContext.shifts, locationOptions]);
 
@@ -101,17 +105,18 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
             locationId,
             location: locationOptions.find((option) => option.value === locationId)?.label ?? "",
             assignedUsers: [],
+            assignedUserIds: selectedUserIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
         };
     }
 
-    function addUserName(memberName: string) {
-        const trimmed = memberName.trim();
-        if (!trimmed || selectedUserNames.includes(trimmed)) return;
-        setSelectedUserNames((prev) => [...prev, trimmed]);
+    function addUserId(userId: string) {
+        const trimmed = userId.trim();
+        if (!trimmed || selectedUserIds.includes(trimmed)) return;
+        setSelectedUserIds((prev) => [...prev, trimmed]);
     }
 
-    function removeUserName(memberName: string) {
-        setSelectedUserNames((prev) => prev.filter((n) => n !== memberName));
+    function removeUserId(userId: string) {
+        setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
     }
 
     function handleLocationChange(next: string) {
@@ -119,6 +124,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
     }
 
     async function deleteShiftHandler() {
+        if (!canEditShift) return;
         try {
             await shiftsContext.deleteShift(selectedShiftId);
             navigation.goBack();
@@ -188,6 +194,7 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
     }
 
     async function saveHandler() {
+        if (!canEditShift) return;
         const shift = buildShiftForSave();
         const parsedLocationId = Number(locationId);
         if (!Number.isFinite(parsedLocationId) || parsedLocationId <= 0) {
@@ -211,9 +218,9 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
 
     useLayoutEffect(() => {
         navigation.setOptions({
-            title: isEditing ? 'Edit Shift' : 'Add Shift',
+            title: isEditing && workerView ? "Shift Details" : isEditing ? 'Edit Shift' : 'Add Shift',
         });
-    }, [navigation, isEditing]);
+    }, [navigation, isEditing, workerView]);
 
 
     return (
@@ -230,30 +237,33 @@ export default function ShiftDetails({ route, navigation }: { route: RouteProp<R
                     location={locationId}
                     locationOptions={locationOptions}
                     locationOptionsReady={locationOptionsReady}
-                    selectedUserNames={selectedUserNames}
+                    selectedUserIds={selectedUserIds}
                     userOptions={userOptions}
                     onChangeTitle={setTitle}
                     onChangeDate={setDate}
                     onChangeTimeStart={setTimeStart}
                     onChangeTimeEnd={setTimeEnd}
                     onChangeLocation={handleLocationChange}
-                    onAddUserName={addUserName}
-                    onRemoveUserName={removeUserName}
+                    onAddUserId={addUserId}
+                    onRemoveUserId={removeUserId}
+                    editable={canEditShift}
                 />
             </ScrollView>
             <View style={styles.buttonsContainer}>
-                <Button title="Cancel" onPress={cancelHandler} mode="flat" style={styles.button} />
-                <Button
-                    title={isEditing ? "Update" : "Add"}
-                    onPress={saveHandler}
-                    mode="filled"
-                    style={styles.button}
-                />
+                <Button title={workerView ? "Close" : "Cancel"} onPress={cancelHandler} mode="flat" style={styles.button} />
+                {canEditShift ? (
+                    <Button
+                        title={isEditing ? "Update" : "Add"}
+                        onPress={saveHandler}
+                        mode="filled"
+                        style={styles.button}
+                    />
+                ) : null}
             </View>
             <View style={styles.deleteContainer}>
-                {isEditing && <IconButton icon="trash" size={24} color={GlobalStyles.colors.maroon600} onPress={deleteShiftHandler} />}
+                {isEditing && canEditShift ? <IconButton icon="trash" size={24} color={GlobalStyles.colors.maroon600} onPress={deleteShiftHandler} /> : null}
             </View>
-            {isEditing ? (
+            {showClockIn ? (
                 <View style={styles.clockInContainer}>
                     <Button
                         title={clockInLoading ? "Clocking in…" : "Clock In"}

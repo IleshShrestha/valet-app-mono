@@ -96,8 +96,8 @@ function parseAssignedUsersFromApi(users: unknown): AssignedUser[] {
       lastName: strFromRecord(o, "last_name", "lastName", "LastName"),
       email: strFromRecord(o, "email", "Email"),
       role: strFromRecord(o, "role", "Role"),
-      checkInTime: (o.check_in_time as string | null | undefined) ?? null,
-      checkOutTime: (o.check_out_time as string | null | undefined) ?? null,
+      checkInTime: (o.check_in_time ?? o.checkInTime ?? null) as string | null,
+      checkOutTime: (o.check_out_time ?? o.checkOutTime ?? null) as string | null,
     });
   });
   return assignedUsers;
@@ -111,6 +111,15 @@ function pickerLabelFromUser(u: unknown, index: number): string {
     if (fromNames) return fromNames;
   }
   return `User ${index + 1}`;
+}
+
+function pickerValueFromUser(u: unknown, fallback: string): string {
+  if (u && typeof u === "object") {
+    const o = u as Record<string, unknown>;
+    const id = o.id ?? o.ID;
+    if (typeof id === "number" || typeof id === "string") return String(id);
+  }
+  return fallback;
 }
 
 export function apiRecordToShift(raw: ShiftApiRecord): Shift {
@@ -136,6 +145,7 @@ export function apiRecordToShift(raw: ShiftApiRecord): Shift {
     locationId,
     location,
     assignedUsers,
+    assignedUserIds: assignedUsers.map((u) => u.id),
   };
 }
 
@@ -148,12 +158,16 @@ function shiftToApiBody(
   locationId: number,
 ): Record<string, unknown> {
   const d = shift.date instanceof Date ? shift.date : new Date(shift.date);
+  const assignedUserIds = (shift.assignedUserIds ?? shift.assignedUsers.map((u) => u.id))
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id) && id > 0);
   return {
     title: shift.title,
     date: d.toISOString(),
     start_time: hhmmToApiTime(shift.timeStart),
     end_time: hhmmToApiTime(shift.timeEnd),
     location_id: locationId,
+    assigned_user_ids: assignedUserIds,
   };
 }
 
@@ -218,7 +232,7 @@ export async function fetchUserPickerOptions(): Promise<UserPickerOption[]> {
 
     return raw.map((u, i) => {
       const label = pickerLabelFromUser(u, i);
-      return { label, value: label };
+      return { label, value: pickerValueFromUser(u, label) };
     });
   } catch {
     return FALLBACK_USER_OPTIONS;

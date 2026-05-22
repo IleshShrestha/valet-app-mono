@@ -58,24 +58,30 @@ function normalizeForMatch(s: string): string {
     return s.trim().toLowerCase();
 }
 
-/** True if shift assignees include this user (by display name). */
+/** True if shift assignees include this user. Prefer stable ids; names are only a legacy fallback. */
 export function shiftAssignedToUser(shift: Shift, user: User | null): boolean {
     if (!user) return false;
-    const name = fullNameFromUser(user);
-    if (!name) {
-        if (__DEV__) {
-            console.warn(
-                "[permissions] Worker shift filter: user has no firstName/lastName; showing all shifts until /auth/me exposes names.",
-            );
-        }
-        return true;
+
+    const userId = Number(user.id);
+    if (Number.isFinite(userId)) {
+        return shift.assignedUsers.some((assignedUser) => Number(assignedUser.id) === userId);
     }
+
+    const name = fullNameFromUser(user);
+    if (!name) return false;
+
     const target = normalizeForMatch(name);
-    return shift.userNames.some((un) => normalizeForMatch(un) === target);
+    return shift.assignedUsers.some((assignedUser) => {
+        const fullName = [assignedUser.firstName, assignedUser.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+        return normalizeForMatch(fullName || assignedUser.email) === target;
+    });
 }
 
 export function filterShiftsForViewer(user: User | null, shifts: Shift[]): Shift[] {
-    if (!user) return shifts;
+    if (!user) return [];
     if (hasAtLeastRole(user, "manager")) return shifts;
     return shifts.filter((s) => shiftAssignedToUser(s, user));
 }

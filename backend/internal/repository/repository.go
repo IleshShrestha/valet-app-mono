@@ -31,6 +31,7 @@ type Repository struct {
 	Shifts interface {
 		Create(ctx context.Context, shift *Shift) error
 		GetAll(ctx context.Context) ([]*Shift, error)
+		GetAllByAssignedUser(ctx context.Context, userID int64) ([]*Shift, error)
 		GetByID(ctx context.Context, id int64) (*Shift, error)
 		Update(ctx context.Context, shift *Shift) error
 		Delete(ctx context.Context, id int64) error

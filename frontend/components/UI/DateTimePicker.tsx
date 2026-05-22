@@ -32,6 +32,7 @@ export type DateTimePickerProps = {
     display?: ModalProps["display"];
     minimumDate?: ModalProps["minimumDate"];
     maximumDate?: ModalProps["maximumDate"];
+    disabled?: boolean;
 
     /** Forward any other modal props (styles, locale, etc.) */
     modalProps?: Omit<
@@ -66,12 +67,14 @@ export default function DateTimePicker({
     maximumDate,
     modalProps,
     style,
+    disabled = false,
 }: DateTimePickerProps) {
     const [isVisible, setIsVisible] = useState(false);
 
     const formattedValue = useMemo(() => formatValue(mode, value), [mode, value]);
 
     function open() {
+        if (disabled) return;
         setIsVisible(true);
     }
 
@@ -85,7 +88,7 @@ export default function DateTimePicker({
                 renderTrigger({ open, label, formattedValue, value })
             ) : (
                 <FormField label={label ?? ""}>
-                    <Pressable onPress={open}>
+                    <Pressable onPress={open} disabled={disabled}>
                         <FieldBox>
                             <Text
                                 style={[

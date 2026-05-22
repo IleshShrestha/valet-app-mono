@@ -1,20 +1,26 @@
 import ShiftOutput from "../components/ShiftOutput/ShiftOutput";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { ShiftContext } from "../store/ShiftContext";
 import { getDateMinusDays } from "../util/Date";
 import { GlobalStyles } from "../constants/style";
+import { useAuth } from "../store/Authcontext";
+import { filterShiftsForViewer } from "../auth/permissions";
 
 export default function ShiftList() {
     const [period, setPeriod] = useState(7);
     const [refreshing, setRefreshing] = useState(false);
+    const { user } = useAuth();
 
     function periodChangeHandler(period: number) {
         setPeriod(period);
     }
 
     const shiftsContext = useContext(ShiftContext);
-    const shifts = shiftsContext.shifts;
+    const shifts = useMemo(
+        () => filterShiftsForViewer(user, shiftsContext.shifts),
+        [user, shiftsContext.shifts],
+    );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);

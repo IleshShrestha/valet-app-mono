@@ -14,6 +14,7 @@ type ModalSelectProps = {
     placeholder?: string;
     maxVisibleOptions?: number;
     searchPlaceholder?: string;
+    disabled?: boolean;
 };
 
 export default function ModalSelect({
@@ -23,6 +24,7 @@ export default function ModalSelect({
     placeholder = "Search or select",
     maxVisibleOptions = 5,
     searchPlaceholder = "Type to filter options...",
+    disabled = false,
 }: ModalSelectProps) {
     const computedMaxHeight = Math.max(180, maxVisibleOptions * 52);
 
@@ -46,6 +48,7 @@ export default function ModalSelect({
                 value={value || null}
                 onChange={(item: ModalSelectOption) => onChange(item.value)}
                 autoScroll={false}
+                disable={disabled}
             />
         </View>
     );

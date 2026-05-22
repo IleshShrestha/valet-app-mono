@@ -10,6 +10,7 @@ export interface Shift {
     location: string;
 
     assignedUsers: AssignedUser[];
+    assignedUserIds?: number[];
 }
 
 export interface AssignedUser {

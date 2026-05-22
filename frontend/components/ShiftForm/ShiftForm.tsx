@@ -14,15 +14,16 @@ export type ShiftFormProps = {
     location: string;
     locationOptions: LocationPickerOption[];
     locationOptionsReady: boolean;
-    selectedUserNames: string[];
+    selectedUserIds: string[];
     userOptions: UserPickerOption[];
     onChangeTitle: (value: string) => void;
     onChangeDate: (value: Date) => void;
     onChangeTimeStart: (value: Date) => void;
     onChangeTimeEnd: (value: Date) => void;
     onChangeLocation: (value: string) => void;
-    onAddUserName: (memberName: string) => void;
-    onRemoveUserName: (memberName: string) => void;
+    onAddUserId: (userId: string) => void;
+    onRemoveUserId: (userId: string) => void;
+    editable?: boolean;
 };
 
 export default function ShiftForm({
@@ -33,19 +34,21 @@ export default function ShiftForm({
     location,
     locationOptions,
     locationOptionsReady,
-    selectedUserNames,
+    selectedUserIds,
     userOptions,
     onChangeTitle,
     onChangeDate,
     onChangeTimeStart,
     onChangeTimeEnd,
     onChangeLocation,
-    onAddUserName,
-    onRemoveUserName,
+    onAddUserId,
+    onRemoveUserId,
+    editable = true,
 }: ShiftFormProps) {
     const addOptions = userOptions.filter(
-        (o) => !selectedUserNames.includes(o.value),
+        (o) => !selectedUserIds.includes(o.value),
     );
+    const labelByUserId = new Map(userOptions.map((option) => [option.value, option.label]));
 
     return (
         <View style={styles.container}>
@@ -56,6 +59,7 @@ export default function ShiftForm({
                         placeholder: "Enter a title",
                         value: title,
                         onChangeText: onChangeTitle,
+                        editable,
                     }}
                 />
             </FormField>
@@ -67,6 +71,7 @@ export default function ShiftForm({
                 value={date}
                 onChange={onChangeDate}
                 modalProps={modalProps}
+                disabled={!editable}
             />
 
             <View style={styles.row}>
@@ -78,6 +83,7 @@ export default function ShiftForm({
                     onChange={onChangeTimeStart}
                     modalProps={{ ...modalProps, is24Hour: false, locale: "en_US" }}
                     style={styles.rowItem}
+                    disabled={!editable}
                 />
                 <DateTimePicker
                     label="End Time"
@@ -87,6 +93,7 @@ export default function ShiftForm({
                     onChange={onChangeTimeEnd}
                     modalProps={{ ...modalProps, is24Hour: false, locale: "en_US" }}
                     style={styles.rowItem}
+                    disabled={!editable}
                 />
             </View>
 
@@ -95,6 +102,7 @@ export default function ShiftForm({
                     value={location}
                     onChange={onChangeLocation}
                     options={locationOptions}
+                    disabled={!editable}
                     placeholder={
                         !locationOptionsReady
                             ? "Loading locations…"
@@ -106,37 +114,40 @@ export default function ShiftForm({
             </FormField>
 
             <FormField label="Team members">
-                {selectedUserNames.length > 0 ? (
+                {selectedUserIds.length > 0 ? (
                     <View style={styles.chipWrap}>
-                        {selectedUserNames.map((memberName) => (
+                        {selectedUserIds.map((userId) => (
                             <Pressable
-                                key={memberName}
-                                onPress={() => onRemoveUserName(memberName)}
+                                key={userId}
+                                onPress={() => editable && onRemoveUserId(userId)}
                                 style={styles.chip}
+                                disabled={!editable}
                             >
                                 <Text style={styles.chipText} numberOfLines={1}>
-                                    {memberName}
+                                    {labelByUserId.get(userId) ?? `User ${userId}`}
                                 </Text>
-                                <Text style={styles.chipRemove}>×</Text>
+                                {editable ? <Text style={styles.chipRemove}>×</Text> : null}
                             </Pressable>
                         ))}
                     </View>
                 ) : null}
-                <View style={styles.addUserSelect}>
-                    <ModalSelect
-                        key={selectedUserNames.join("|")}
-                        value=""
-                        onChange={(next) => {
-                            if (next) onAddUserName(next);
-                        }}
-                        options={addOptions}
-                        placeholder={
-                            addOptions.length
-                                ? "Add team member…"
-                                : "No more members to add"
-                        }
-                    />
-                </View>
+                {editable ? (
+                    <View style={styles.addUserSelect}>
+                        <ModalSelect
+                            key={selectedUserIds.join("|")}
+                            value=""
+                            onChange={(next) => {
+                                if (next) onAddUserId(next);
+                            }}
+                            options={addOptions}
+                            placeholder={
+                                addOptions.length
+                                    ? "Add team member…"
+                                    : "No more members to add"
+                            }
+                        />
+                    </View>
+                ) : null}
             </FormField>
         </View>
     );

@@ -11,6 +11,7 @@ import {
   fetchShifts,
   updateShift as updateShiftApi,
 } from "../util/shiftsApi";
+import { useAuth } from "./Authcontext";
 
 export type ShiftContextValue = {
   shifts: Shift[];
@@ -36,10 +37,12 @@ const SHIFT_QUERY_KEY = ["shifts"] as const;
 
 export function ShiftContextProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { user, isLoading: authLoading } = useAuth();
 
   const shiftsQuery = useQuery({
-    queryKey: SHIFT_QUERY_KEY,
+    queryKey: [...SHIFT_QUERY_KEY, user?.id ?? "anonymous"],
     queryFn: fetchShifts,
+    enabled: !!user && !authLoading,
   });
 
   const addShiftMutation = useMutation({

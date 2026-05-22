@@ -5,17 +5,48 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"valet-backend-go/internal/repository"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type CreateShiftPayload struct {
-	Title      string `json:"title" validate:"required"`
-	Date       string `json:"date" validate:"required"`
-	TimeStart  string `json:"start_time" validate:"required"`
-	TimeEnd    string `json:"end_time" validate:"required"`
-	LocationID int64  `json:"location_id" validate:"required,min=1"`
+	Title           string  `json:"title" validate:"required"`
+	Date            string  `json:"date" validate:"required"`
+	TimeStart       string  `json:"start_time" validate:"required"`
+	TimeEnd         string  `json:"end_time" validate:"required"`
+	LocationID      int64   `json:"location_id" validate:"required,min=1"`
+	AssignedUserIDs []int64 `json:"assigned_user_ids"`
+}
+
+func assignedUsersFromIDs(ids []int64) []repository.AssignedUser {
+	users := make([]repository.AssignedUser, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		users = append(users, repository.AssignedUser{ID: id})
+	}
+	return users
+}
+
+func roleCanSeeAllShifts(role string) bool {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "admin", "manager":
+		return true
+	default:
+		return false
+	}
+}
+
+func shiftAssignedToUser(shift *repository.Shift, userID int64) bool {
+	for _, assignedUser := range shift.AssignedUsers {
+		if assignedUser.ID == userID {
+			return true
+		}
+	}
+	return false
 }
 
 func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,19 +62,26 @@ func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	shift := &repository.Shift{
-		Title:      payload.Title,
-		Date:       payload.Date,
-		LocationID: payload.LocationID,
-		StartTime:  payload.TimeStart,
-		EndTime:    payload.TimeEnd,
+		Title:         payload.Title,
+		Date:          payload.Date,
+		LocationID:    payload.LocationID,
+		StartTime:     payload.TimeStart,
+		EndTime:       payload.TimeEnd,
+		AssignedUsers: assignedUsersFromIDs(payload.AssignedUserIDs),
 	}
 	ctx := r.Context()
 
 	if err := app.repository.Shifts.Create(ctx, shift); err != nil {
 		app.internalServerError(w, r, err)
+		return
+	}
+	created, err := app.repository.Shifts.GetByID(ctx, shift.ID)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
 	}
 
-	if err := app.jsonResponse(w, http.StatusCreated, shift); err != nil {
+	if err := app.jsonResponse(w, http.StatusCreated, created); err != nil {
 		app.internalServerError(w, r, err)
 	}
 	log.Printf("created shift: %s", shift.Title)
@@ -52,7 +90,17 @@ func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Reques
 
 func (app *application) getAllShiftsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	shifts, err := app.repository.Shifts.GetAll(ctx)
+	authUser := authUserFromCtx(ctx)
+
+	var (
+		shifts []*repository.Shift
+		err    error
+	)
+	if roleCanSeeAllShifts(authUser.Role) {
+		shifts, err = app.repository.Shifts.GetAll(ctx)
+	} else {
+		shifts, err = app.repository.Shifts.GetAllByAssignedUser(ctx, authUser.UserID)
+	}
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -80,6 +128,11 @@ func (app *application) getShiftHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
+	authUser := authUserFromCtx(ctx)
+	if !roleCanSeeAllShifts(authUser.Role) && !shiftAssignedToUser(shift, authUser.UserID) {
+		_ = writeJSONError(w, http.StatusForbidden, "forbidden")
+		return
+	}
 	if err := app.jsonResponse(w, http.StatusOK, shift); err != nil {
 		app.internalServerError(w, r, err)
 	}
@@ -104,12 +157,13 @@ func (app *application) updateShiftHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	shift := &repository.Shift{
-		ID:         id,
-		Title:      payload.Title,
-		Date:       payload.Date,
-		LocationID: payload.LocationID,
-		StartTime:  payload.TimeStart,
-		EndTime:    payload.TimeEnd,
+		ID:            id,
+		Title:         payload.Title,
+		Date:          payload.Date,
+		LocationID:    payload.LocationID,
+		StartTime:     payload.TimeStart,
+		EndTime:       payload.TimeEnd,
+		AssignedUsers: assignedUsersFromIDs(payload.AssignedUserIDs),
 	}
 	ctx := r.Context()
 	if err := app.repository.Shifts.Update(ctx, shift); err != nil {
