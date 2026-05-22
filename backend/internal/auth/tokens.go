@@ -12,9 +12,10 @@ import (
 )
 
 type UserClaims struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID         int64  `json:"user_id"`
+	OrganizationID string `json:"organization_id"`
+	Email          string `json:"email"`
+	Role           string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -28,9 +29,9 @@ func NewTokenManager(secret string, accessTTLMinutes int, refreshTTLDays int) *T
 	return &TokenManager{jwtSecret: []byte(secret), accessTokenTTL: time.Duration(accessTTLMinutes) * time.Minute, refreshTokenTTL: time.Duration(refreshTTLDays) * 24 * time.Hour}
 }
 
-func (tm *TokenManager) GenerateAccessToken(userID int64, email, role string) (string, error) {
+func (tm *TokenManager) GenerateAccessToken(userID int64, organizationID, email, role string) (string, error) {
 	now := time.Now().UTC()
-	claims := UserClaims{UserID: userID, Email: email, Role: role, RegisteredClaims: jwt.RegisteredClaims{IssuedAt: jwt.NewNumericDate(now), ExpiresAt: jwt.NewNumericDate(now.Add(tm.accessTokenTTL))}}
+	claims := UserClaims{UserID: userID, OrganizationID: organizationID, Email: email, Role: role, RegisteredClaims: jwt.RegisteredClaims{IssuedAt: jwt.NewNumericDate(now), ExpiresAt: jwt.NewNumericDate(now.Add(tm.accessTokenTTL))}}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(tm.jwtSecret)
 }

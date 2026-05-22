@@ -17,15 +17,16 @@ type AssignedUser struct {
 }
 
 type Shift struct {
-	ID            int64          `json:"id"`
-	Title         string         `json:"title"`
-	AssignedUsers []AssignedUser `json:"assigned_users"`
-	Date          string         `json:"date"`
-	LocationID    int64          `json:"location_id"`
-	StartTime     string         `json:"start_time"`
-	EndTime       string         `json:"end_time"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
+	ID             int64          `json:"id"`
+	OrganizationID string         `json:"organization_id,omitempty"`
+	Title          string         `json:"title"`
+	AssignedUsers  []AssignedUser `json:"assigned_users"`
+	Date           string         `json:"date"`
+	LocationID     int64          `json:"location_id"`
+	StartTime      string         `json:"start_time"`
+	EndTime        string         `json:"end_time"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type ShiftRepository struct {
@@ -40,39 +41,49 @@ func (s *ShiftRepository) Create(ctx context.Context, shift *Shift) error {
 	defer tx.Rollback()
 
 	query := `
-	INSERT INTO shifts (title, date, location_id, start_time, end_time) 
-	VALUES ($1, $2, $3, $4, $5)
-	RETURNING id, created_at, updated_at
+	INSERT INTO shifts (organization_id, title, location_id, start_at, end_at)
+	VALUES (
+		$1,
+		$2,
+		$3,
+		($4::date + $5::time) AT TIME ZONE 'UTC',
+		CASE
+			WHEN $6::time <= $5::time THEN (($4::date + 1) + $6::time) AT TIME ZONE 'UTC'
+			ELSE ($4::date + $6::time) AT TIME ZONE 'UTC'
+		END
+	)
+	RETURNING id, organization_id, created_at, updated_at
 `
 
 	err = tx.QueryRowContext(
 		ctx,
 		query,
+		shift.OrganizationID,
 		shift.Title,
-		shift.Date,
 		shift.LocationID,
+		shift.Date,
 		shift.StartTime,
 		shift.EndTime,
-	).Scan(&shift.ID, &shift.CreatedAt, &shift.UpdatedAt)
+	).Scan(&shift.ID, &shift.OrganizationID, &shift.CreatedAt, &shift.UpdatedAt)
 
 	if err != nil {
 		return err
 	}
-	if err := syncShiftUsers(ctx, tx, shift.ID, shift.AssignedUsers); err != nil {
+	if err := syncShiftUsers(ctx, tx, shift.ID, shift.OrganizationID, shift.AssignedUsers); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func (s *ShiftRepository) GetAll(ctx context.Context) ([]*Shift, error) {
+func (s *ShiftRepository) GetAll(ctx context.Context, organizationID string) ([]*Shift, error) {
 	query := `
 	SELECT
 		s.id,
 		s.title,
-		s.date,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
 		s.location_id,
-		s.start_time,
-		s.end_time,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS start_time,
+		to_char(s.end_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS end_time,
 		s.created_at,
 		s.updated_at,
 		u.id,
@@ -83,11 +94,12 @@ func (s *ShiftRepository) GetAll(ctx context.Context) ([]*Shift, error) {
 		su.check_in_time,
 		su.check_out_time
 	FROM shifts s
-	LEFT JOIN shift_users su ON su.shift_id = s.id
-	LEFT JOIN users u ON u.id = su.user_id
+	LEFT JOIN shift_users su ON su.shift_id = s.id AND su.organization_id = s.organization_id
+	LEFT JOIN users u ON u.id = su.user_id AND u.organization_id = su.organization_id
+	WHERE s.organization_id = $1
 	ORDER BY s.id, u.id
 	`
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.QueryContext(ctx, query, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -168,15 +180,15 @@ func scanShiftRows(rows *sql.Rows) ([]*Shift, error) {
 	return shifts, nil
 }
 
-func (s *ShiftRepository) GetAllByAssignedUser(ctx context.Context, userID int64) ([]*Shift, error) {
+func (s *ShiftRepository) GetAllByAssignedUser(ctx context.Context, userID int64, organizationID string) ([]*Shift, error) {
 	query := `
 	SELECT
 		s.id,
 		s.title,
-		s.date,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
 		s.location_id,
-		s.start_time,
-		s.end_time,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS start_time,
+		to_char(s.end_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS end_time,
 		s.created_at,
 		s.updated_at,
 		u.id,
@@ -187,17 +199,19 @@ func (s *ShiftRepository) GetAllByAssignedUser(ctx context.Context, userID int64
 		su.check_in_time,
 		su.check_out_time
 	FROM shifts s
-	LEFT JOIN shift_users su ON su.shift_id = s.id
-	LEFT JOIN users u ON u.id = su.user_id
+	LEFT JOIN shift_users su ON su.shift_id = s.id AND su.organization_id = s.organization_id
+	LEFT JOIN users u ON u.id = su.user_id AND u.organization_id = su.organization_id
 	WHERE EXISTS (
 		SELECT 1
 		FROM shift_users assigned
 		WHERE assigned.shift_id = s.id
+			AND assigned.organization_id = s.organization_id
 			AND assigned.user_id = $1
 	)
+	AND s.organization_id = $2
 	ORDER BY s.id, u.id
 	`
-	rows, err := s.db.QueryContext(ctx, query, userID)
+	rows, err := s.db.QueryContext(ctx, query, userID, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,15 +220,15 @@ func (s *ShiftRepository) GetAllByAssignedUser(ctx context.Context, userID int64
 	return scanShiftRows(rows)
 }
 
-func (s *ShiftRepository) GetByID(ctx context.Context, id int64) (*Shift, error) {
+func (s *ShiftRepository) GetByID(ctx context.Context, id int64, organizationID string) (*Shift, error) {
 	query := `
 	SELECT
 		s.id,
 		s.title,
-		s.date,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS date,
 		s.location_id,
-		s.start_time,
-		s.end_time,
+		to_char(s.start_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS start_time,
+		to_char(s.end_at AT TIME ZONE 'UTC', 'HH24:MI:SS') AS end_time,
 		s.created_at,
 		s.updated_at,
 		u.id,
@@ -225,12 +239,13 @@ func (s *ShiftRepository) GetByID(ctx context.Context, id int64) (*Shift, error)
 		su.check_in_time,
 		su.check_out_time
 	FROM shifts s
-	LEFT JOIN shift_users su ON su.shift_id = s.id
-	LEFT JOIN users u ON u.id = su.user_id
+	LEFT JOIN shift_users su ON su.shift_id = s.id AND su.organization_id = s.organization_id
+	LEFT JOIN users u ON u.id = su.user_id AND u.organization_id = su.organization_id
 	WHERE s.id = $1
+		AND s.organization_id = $2
 	ORDER BY u.id
 	`
-	rows, err := s.db.QueryContext(ctx, query, id)
+	rows, err := s.db.QueryContext(ctx, query, id, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -312,16 +327,25 @@ func (s *ShiftRepository) Update(ctx context.Context, shift *Shift) error {
 
 	query := `
 	UPDATE shifts
-	SET title = $1, date = $2, location_id = $3, start_time = $4, end_time = $5
+	SET title = $1,
+		location_id = $2,
+		start_at = ($3::date + $4::time) AT TIME ZONE 'UTC',
+		end_at = CASE
+			WHEN $5::time <= $4::time THEN (($3::date + 1) + $5::time) AT TIME ZONE 'UTC'
+			ELSE ($3::date + $5::time) AT TIME ZONE 'UTC'
+		END,
+		updated_at = NOW()
 	WHERE id = $6
+		AND organization_id = $7
 	`
 	res, err := tx.ExecContext(ctx, query,
 		shift.Title,
-		shift.Date,
 		shift.LocationID,
+		shift.Date,
 		shift.StartTime,
 		shift.EndTime,
 		shift.ID,
+		shift.OrganizationID,
 	)
 	if err != nil {
 		return err
@@ -333,14 +357,14 @@ func (s *ShiftRepository) Update(ctx context.Context, shift *Shift) error {
 	if n == 0 {
 		return ErrNotFound
 	}
-	if err := syncShiftUsers(ctx, tx, shift.ID, shift.AssignedUsers); err != nil {
+	if err := syncShiftUsers(ctx, tx, shift.ID, shift.OrganizationID, shift.AssignedUsers); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func syncShiftUsers(ctx context.Context, tx *sql.Tx, shiftID int64, assignedUsers []AssignedUser) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM shift_users WHERE shift_id = $1`, shiftID); err != nil {
+func syncShiftUsers(ctx context.Context, tx *sql.Tx, shiftID int64, organizationID string, assignedUsers []AssignedUser) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM shift_users WHERE shift_id = $1 AND organization_id = $2`, shiftID, organizationID); err != nil {
 		return err
 	}
 
@@ -353,15 +377,30 @@ func syncShiftUsers(ctx context.Context, tx *sql.Tx, shiftID int64, assignedUser
 			continue
 		}
 		seen[user.ID] = struct{}{}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO shift_users (shift_id, user_id) VALUES ($1, $2)`, shiftID, user.ID); err != nil {
+		res, err := tx.ExecContext(ctx, `
+			INSERT INTO shift_users (organization_id, shift_id, user_id)
+			SELECT s.organization_id, s.id, u.id
+			FROM shifts s
+			JOIN users u ON u.id = $2 AND u.organization_id = s.organization_id
+			WHERE s.id = $1
+				AND s.organization_id = $3
+		`, shiftID, user.ID, organizationID)
+		if err != nil {
 			return err
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrNotFound
 		}
 	}
 	return nil
 }
 
-func (s *ShiftRepository) Delete(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM shifts WHERE id = $1`, id)
+func (s *ShiftRepository) Delete(ctx context.Context, id int64, organizationID string) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM shifts WHERE id = $1 AND organization_id = $2`, id, organizationID)
 	if err != nil {
 		return err
 	}

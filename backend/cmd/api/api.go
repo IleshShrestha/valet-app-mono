@@ -52,18 +52,18 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/users", func(r chi.Router) {
 			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createUserHandler)
-			r.Get("/", app.getAllUsersHandler)
+			r.With(app.requireAuth).Get("/", app.getAllUsersHandler)
 			r.Route("/{userId}", func(r chi.Router) {
-				r.Get("/", app.getUserHandler)
-				r.Put("/", app.updateUserHandler)
-				r.Delete("/", app.deleteUserHandler)
+				r.With(app.requireAuth).Get("/", app.getUserHandler)
+				r.With(app.requireAuth, requireRole("admin")).Put("/", app.updateUserHandler)
+				r.With(app.requireAuth, requireRole("admin")).Delete("/", app.deleteUserHandler)
 			})
 		})
 		r.Route("/shifts", func(r chi.Router) {
 			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createShiftHandler)
 			r.With(app.requireAuth).Get("/", app.getAllShiftsHandler)
-			r.Get("/locations", app.getShiftLocationsHandler)
-			r.Post("/check-location", app.checkLocationHandler)
+			r.With(app.requireAuth).Get("/locations", app.getShiftLocationsHandler)
+			r.With(app.requireAuth).Post("/check-location", app.checkLocationHandler)
 			r.Route("/{shiftId}", func(r chi.Router) {
 				r.With(app.requireAuth).Get("/", app.getShiftHandler)
 				r.Put("/", app.updateShiftHandler)

@@ -9,12 +9,12 @@ import (
 
 func TestAccessTokenValidation(t *testing.T) {
 	tm := auth.NewTokenManager("secret", 15, 30)
-	tok, err := tm.GenerateAccessToken(1, "user@example.com", "admin")
+	tok, err := tm.GenerateAccessToken(1, "00000000-0000-0000-0000-000000000001", "user@example.com", "admin")
 	if err != nil {
 		t.Fatal(err)
 	}
 	claims, err := tm.ValidateAccessToken(tok)
-	if err != nil || claims.UserID != 1 {
+	if err != nil || claims.UserID != 1 || claims.OrganizationID == "" {
 		t.Fatal("invalid token claims")
 	}
 }

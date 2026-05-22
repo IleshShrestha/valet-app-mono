@@ -8,11 +8,12 @@ import (
 
 // Location is a named geofence. Radius is the geofence radius in meters.
 type Location struct {
-	ID        int64   `json:"id"`
-	Name      string  `json:"name"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Radius    float64 `json:"radius"`
+	ID             int64   `json:"id"`
+	OrganizationID string  `json:"organization_id,omitempty"`
+	Name           string  `json:"name"`
+	Latitude       float64 `json:"latitude"`
+	Longitude      float64 `json:"longitude"`
+	Radius         float64 `json:"radius"`
 }
 
 // LocationSummary is a minimal row for listing pickers (e.g. GET /shifts/locations).
@@ -25,15 +26,17 @@ type LocationRepository struct {
 	db *sql.DB
 }
 
-func (l *LocationRepository) GetByID(ctx context.Context, id int64) (*Location, error) {
+func (l *LocationRepository) GetByID(ctx context.Context, id int64, organizationID string) (*Location, error) {
 	query := `
-	SELECT id, name, latitude, longitude, radius
+	SELECT id, organization_id, name, latitude, longitude, radius
 	FROM locations
 	WHERE id = $1
+		AND organization_id = $2
 	`
 	var loc Location
-	err := l.db.QueryRowContext(ctx, query, id).Scan(
+	err := l.db.QueryRowContext(ctx, query, id, organizationID).Scan(
 		&loc.ID,
+		&loc.OrganizationID,
 		&loc.Name,
 		&loc.Latitude,
 		&loc.Longitude,
@@ -48,13 +51,14 @@ func (l *LocationRepository) GetByID(ctx context.Context, id int64) (*Location, 
 	return &loc, nil
 }
 
-func (l *LocationRepository) ListSummaries(ctx context.Context) ([]LocationSummary, error) {
+func (l *LocationRepository) ListSummaries(ctx context.Context, organizationID string) ([]LocationSummary, error) {
 	query := `
 	SELECT id, name
 	FROM locations
+	WHERE organization_id = $1
 	ORDER BY name
 	`
-	rows, err := l.db.QueryContext(ctx, query)
+	rows, err := l.db.QueryContext(ctx, query, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -76,11 +80,11 @@ func (l *LocationRepository) ListSummaries(ctx context.Context) ([]LocationSumma
 
 func (l *LocationRepository) Create(ctx context.Context, loc *Location) error {
 	query := `
-	INSERT INTO locations (name, latitude, longitude, radius)
-	VALUES ($1, $2, $3, $4)
-	RETURNING id
+	INSERT INTO locations (organization_id, name, latitude, longitude, radius)
+	VALUES (COALESCE(NULLIF($1, '')::uuid, '00000000-0000-0000-0000-000000000001'), $2, $3, $4, $5)
+	RETURNING id, organization_id
 	`
-	err := l.db.QueryRowContext(ctx, query, loc.Name, loc.Latitude, loc.Longitude, loc.Radius).Scan(&loc.ID)
+	err := l.db.QueryRowContext(ctx, query, loc.OrganizationID, loc.Name, loc.Latitude, loc.Longitude, loc.Radius).Scan(&loc.ID, &loc.OrganizationID)
 	if err != nil {
 		return err
 	}

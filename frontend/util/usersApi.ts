@@ -1,7 +1,7 @@
 import { apiClient } from "./apiClient";
 
 export type CreateUserPayload = {
-  role: "worker" | "manager" | "admin";
+  role: "employee" | "manager";
   first_name: string;
   last_name: string;
   email: string;

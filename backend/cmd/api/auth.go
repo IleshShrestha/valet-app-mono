@@ -26,10 +26,10 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		_ = writeJSONError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
-	accessToken, _ := app.tokenManager.GenerateAccessToken(u.ID, u.Email, u.Role)
+	accessToken, _ := app.tokenManager.GenerateAccessToken(u.ID, u.OrganizationID, u.Email, u.Role)
 	rawRefreshToken, _ := auth.GenerateRefreshToken()
 	_ = app.repository.RefreshTokens.CreateRefreshToken(r.Context(), u.ID, auth.HashRefreshToken(rawRefreshToken), req.Platform, req.DeviceName, r.UserAgent(), r.RemoteAddr, time.Now().UTC().Add(app.tokenManager.RefreshTokenTTL()))
-	_ = writeJSON(w, http.StatusOK, map[string]any{"access_token": accessToken, "refresh_token": rawRefreshToken, "user": map[string]any{"id": u.ID, "email": u.Email, "role": u.Role}})
+	_ = writeJSON(w, http.StatusOK, map[string]any{"access_token": accessToken, "refresh_token": rawRefreshToken, "user": map[string]any{"id": u.ID, "organization_id": u.OrganizationID, "email": u.Email, "role": u.Role}})
 }
 
 func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,7 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	_ = app.repository.RefreshTokens.RevokeRefreshToken(r.Context(), hash)
 	newRaw, _ := auth.GenerateRefreshToken()
 	_ = app.repository.RefreshTokens.CreateRefreshToken(r.Context(), rt.UserID, auth.HashRefreshToken(newRaw), rt.Platform.String, rt.DeviceName.String, r.UserAgent(), r.RemoteAddr, time.Now().UTC().Add(app.tokenManager.RefreshTokenTTL()))
-	accessToken, _ := app.tokenManager.GenerateAccessToken(rt.UserID, rt.UserEmail, rt.UserRole)
+	accessToken, _ := app.tokenManager.GenerateAccessToken(rt.UserID, rt.UserOrganizationID, rt.UserEmail, rt.UserRole)
 	_ = writeJSON(w, http.StatusOK, map[string]string{"access_token": accessToken, "refresh_token": newRaw})
 }
 
@@ -71,5 +71,5 @@ func (app *application) logoutAllHandler(w http.ResponseWriter, r *http.Request)
 }
 func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
 	au := authUserFromCtx(r.Context())
-	_ = writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{"id": au.UserID, "email": au.Email, "role": au.Role}})
+	_ = writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{"id": au.UserID, "organization_id": au.OrganizationID, "email": au.Email, "role": au.Role}})
 }

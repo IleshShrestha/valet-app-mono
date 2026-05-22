@@ -12,7 +12,21 @@ import (
 
 func main() {
 	_ = godotenv.Load()
-	cfg := config{addr: env.GetString("ADDR"), db: dbConfig{addr: env.GetString("DATABASE_URL"), maxOpenConns: env.GetInt("MAX_OPEN_CONNECTIONS"), maxIdleConns: env.GetInt("MAX_IDLE_CONNECTIONS"), maxIdleTime: env.GetString("MAX_IDLE_TIME")}, env: env.GetString("ENVIRONMENT"), auth: authConfig{jwtSecret: env.GetString("JWT_SECRET"), accessTokenTTLMinutes: env.GetInt("ACCESS_TOKEN_TTL_MINUTES"), refreshTokenTTLDays: env.GetInt("REFRESH_TOKEN_TTL_DAYS")}}
+	cfg := config{
+		addr: env.GetString("ADDR"),
+		db: dbConfig{
+			addr:         env.GetString("DATABASE_URL"),
+			maxOpenConns: env.GetInt("MAX_OPEN_CONNECTIONS"),
+			maxIdleConns: env.GetInt("MAX_IDLE_CONNECTIONS"),
+			maxIdleTime:  env.GetString("MAX_IDLE_TIME"),
+		},
+		env: env.GetString("ENVIRONMENT"),
+		auth: authConfig{
+			jwtSecret:             env.GetString("JWT_SECRET"),
+			accessTokenTTLMinutes: env.GetInt("ACCESS_TOKEN_TTL_MINUTES"),
+			refreshTokenTTLDays:   env.GetInt("REFRESH_TOKEN_TTL_DAYS"),
+		},
+	}
 	if cfg.auth.accessTokenTTLMinutes == 0 {
 		cfg.auth.accessTokenTTLMinutes = 15
 	}

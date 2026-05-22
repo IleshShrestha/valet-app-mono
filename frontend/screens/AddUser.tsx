@@ -12,16 +12,15 @@ import ModalSelect, { type ModalSelectOption } from "../components/UI/ModalSelec
 import { createUser } from "../util/usersApi";
 
 const roleOptions: ModalSelectOption[] = [
-  { label: "Worker", value: "worker" },
+  { label: "Employee", value: "employee" },
   { label: "Manager", value: "manager" },
-  { label: "Admin", value: "admin" },
 ];
 
 export default function AddUser() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [role, setRole] = useState<"worker" | "manager" | "admin">("worker");
+  const [role, setRole] = useState<"employee" | "manager">("employee");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -94,7 +93,7 @@ export default function AddUser() {
         <FormField label="Role">
           <ModalSelect
             value={role}
-            onChange={(next) => setRole(next as "worker" | "manager" | "admin")}
+            onChange={(next) => setRole(next as "employee" | "manager")}
             options={roleOptions}
             placeholder="Select a role"
             searchPlaceholder="Type to filter roles..."

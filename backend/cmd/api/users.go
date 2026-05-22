@@ -45,11 +45,12 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	user := &repository.User{
-		FirstName: payload.FirstName,
-		LastName:  payload.LastName,
-		Email:     payload.Email,
-		Password:  string(hashedPassword),
-		Role:      payload.Role,
+		OrganizationID: authUserFromCtx(r.Context()).OrganizationID,
+		FirstName:      payload.FirstName,
+		LastName:       payload.LastName,
+		Email:          payload.Email,
+		Password:       string(hashedPassword),
+		Role:           payload.Role,
 	}
 	ctx := r.Context()
 
@@ -65,7 +66,7 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 
 func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	users, err := app.repository.Users.GetAll(ctx)
+	users, err := app.repository.Users.GetAll(ctx, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -83,7 +84,7 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	user, err := app.repository.Users.GetById(ctx, id)
+	user, err := app.repository.Users.GetById(ctx, id, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):
@@ -131,7 +132,7 @@ func (app *application) updateUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	ctx := r.Context()
-	err = app.repository.Users.Update(ctx, id, payload.Role, payload.FirstName, payload.LastName, payload.Email, hashedPassword)
+	err = app.repository.Users.Update(ctx, id, authUserFromCtx(ctx).OrganizationID, payload.Role, payload.FirstName, payload.LastName, payload.Email, hashedPassword)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):
@@ -142,7 +143,7 @@ func (app *application) updateUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user, err := app.repository.Users.GetById(ctx, id)
+	user, err := app.repository.Users.GetById(ctx, id, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -160,7 +161,7 @@ func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	ctx := r.Context()
-	if err := app.repository.Users.Delete(ctx, id); err != nil {
+	if err := app.repository.Users.Delete(ctx, id, authUserFromCtx(ctx).OrganizationID); err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):
 			app.notFoundResponse(w, r, err)

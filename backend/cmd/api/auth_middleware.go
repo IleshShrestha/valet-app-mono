@@ -9,11 +9,13 @@ import (
 type ctxKey string
 
 const authUserKey ctxKey = "auth_user"
+const defaultOrganizationID = "00000000-0000-0000-0000-000000000001"
 
 type authCtxUser struct {
-	UserID int64
-	Email  string
-	Role   string
+	UserID         int64
+	OrganizationID string
+	Email          string
+	Role           string
 }
 
 func (app *application) requireAuth(next http.Handler) http.Handler {
@@ -29,7 +31,11 @@ func (app *application) requireAuth(next http.Handler) http.Handler {
 			_ = writeJSONError(w, http.StatusUnauthorized, "invalid access token")
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authUserKey, authCtxUser{UserID: claims.UserID, Email: claims.Email, Role: claims.Role})))
+		organizationID := claims.OrganizationID
+		if organizationID == "" {
+			organizationID = defaultOrganizationID
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authUserKey, authCtxUser{UserID: claims.UserID, OrganizationID: organizationID, Email: claims.Email, Role: claims.Role})))
 	})
 }
 func requireRole(roles ...string) func(http.Handler) http.Handler {

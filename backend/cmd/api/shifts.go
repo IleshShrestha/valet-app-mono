@@ -62,12 +62,13 @@ func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	shift := &repository.Shift{
-		Title:         payload.Title,
-		Date:          payload.Date,
-		LocationID:    payload.LocationID,
-		StartTime:     payload.TimeStart,
-		EndTime:       payload.TimeEnd,
-		AssignedUsers: assignedUsersFromIDs(payload.AssignedUserIDs),
+		OrganizationID: authUserFromCtx(r.Context()).OrganizationID,
+		Title:          payload.Title,
+		Date:           payload.Date,
+		LocationID:     payload.LocationID,
+		StartTime:      payload.TimeStart,
+		EndTime:        payload.TimeEnd,
+		AssignedUsers:  assignedUsersFromIDs(payload.AssignedUserIDs),
 	}
 	ctx := r.Context()
 
@@ -75,7 +76,7 @@ func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Reques
 		app.internalServerError(w, r, err)
 		return
 	}
-	created, err := app.repository.Shifts.GetByID(ctx, shift.ID)
+	created, err := app.repository.Shifts.GetByID(ctx, shift.ID, shift.OrganizationID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -97,9 +98,9 @@ func (app *application) getAllShiftsHandler(w http.ResponseWriter, r *http.Reque
 		err    error
 	)
 	if roleCanSeeAllShifts(authUser.Role) {
-		shifts, err = app.repository.Shifts.GetAll(ctx)
+		shifts, err = app.repository.Shifts.GetAll(ctx, authUser.OrganizationID)
 	} else {
-		shifts, err = app.repository.Shifts.GetAllByAssignedUser(ctx, authUser.UserID)
+		shifts, err = app.repository.Shifts.GetAllByAssignedUser(ctx, authUser.UserID, authUser.OrganizationID)
 	}
 	if err != nil {
 		app.internalServerError(w, r, err)
@@ -118,7 +119,8 @@ func (app *application) getShiftHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	ctx := r.Context()
-	shift, err := app.repository.Shifts.GetByID(ctx, id)
+	authUser := authUserFromCtx(ctx)
+	shift, err := app.repository.Shifts.GetByID(ctx, id, authUser.OrganizationID)
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):
@@ -128,7 +130,6 @@ func (app *application) getShiftHandler(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-	authUser := authUserFromCtx(ctx)
 	if !roleCanSeeAllShifts(authUser.Role) && !shiftAssignedToUser(shift, authUser.UserID) {
 		_ = writeJSONError(w, http.StatusForbidden, "forbidden")
 		return
@@ -157,13 +158,14 @@ func (app *application) updateShiftHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	shift := &repository.Shift{
-		ID:            id,
-		Title:         payload.Title,
-		Date:          payload.Date,
-		LocationID:    payload.LocationID,
-		StartTime:     payload.TimeStart,
-		EndTime:       payload.TimeEnd,
-		AssignedUsers: assignedUsersFromIDs(payload.AssignedUserIDs),
+		ID:             id,
+		OrganizationID: authUserFromCtx(r.Context()).OrganizationID,
+		Title:          payload.Title,
+		Date:           payload.Date,
+		LocationID:     payload.LocationID,
+		StartTime:      payload.TimeStart,
+		EndTime:        payload.TimeEnd,
+		AssignedUsers:  assignedUsersFromIDs(payload.AssignedUserIDs),
 	}
 	ctx := r.Context()
 	if err := app.repository.Shifts.Update(ctx, shift); err != nil {
@@ -176,7 +178,7 @@ func (app *application) updateShiftHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updated, err := app.repository.Shifts.GetByID(ctx, id)
+	updated, err := app.repository.Shifts.GetByID(ctx, id, shift.OrganizationID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -194,7 +196,7 @@ func (app *application) deleteShiftHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	ctx := r.Context()
-	if err := app.repository.Shifts.Delete(ctx, id); err != nil {
+	if err := app.repository.Shifts.Delete(ctx, id, authUserFromCtx(ctx).OrganizationID); err != nil {
 		switch {
 		case errors.Is(err, repository.ErrNotFound):
 			app.notFoundResponse(w, r, err)

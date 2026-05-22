@@ -28,7 +28,7 @@ type checkLocationResponse struct {
 
 func (app *application) getShiftLocationsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	locations, err := app.repository.Locations.ListSummaries(ctx)
+	locations, err := app.repository.Locations.ListSummaries(ctx, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -57,7 +57,7 @@ func (app *application) checkLocationHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
-	loc, err := app.repository.Locations.GetByID(ctx, payload.LocationID)
+	loc, err := app.repository.Locations.GetByID(ctx, payload.LocationID, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
 		log.Printf("check-location: GetByID failed req_id=%s location_id=%d err=%v", reqID, payload.LocationID, err)
 		switch {
@@ -100,10 +100,11 @@ func (app *application) createLocationHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	location := &repository.Location{
-		Latitude:  payload.Latitude,
-		Longitude: payload.Longitude,
-		Name:      payload.Name,
-		Radius:    payload.Radius,
+		OrganizationID: authUserFromCtx(r.Context()).OrganizationID,
+		Latitude:       payload.Latitude,
+		Longitude:      payload.Longitude,
+		Name:           payload.Name,
+		Radius:         payload.Radius,
 	}
 	ctx := r.Context()
 

@@ -8,14 +8,15 @@ import (
 )
 
 type User struct {
-	ID        int64     `json:"id"`
-	Role      string    `json:"role"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             int64     `json:"id"`
+	OrganizationID string    `json:"organization_id"`
+	Role           string    `json:"role"`
+	FirstName      string    `json:"first_name"`
+	LastName       string    `json:"last_name"`
+	Email          string    `json:"email"`
+	Password       string    `json:"-"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type UserRepository struct {
@@ -24,13 +25,14 @@ type UserRepository struct {
 
 func (u *UserRepository) Create(ctx context.Context, user *User) error {
 	query := `
-	INSERT INTO users (role, first_name, last_name, email, password) 
-	VALUES ($1, $2, $3, $4, $5) 
-	RETURNING id, created_at, updated_at`
+	INSERT INTO users (organization_id, role, first_name, last_name, email, password_hash)
+	VALUES (COALESCE(NULLIF($1, '')::uuid, '00000000-0000-0000-0000-000000000001'), $2, $3, $4, $5, $6)
+	RETURNING id, organization_id, created_at, updated_at`
 
 	err := u.db.QueryRowContext(
 		ctx,
 		query,
+		user.OrganizationID,
 		user.Role,
 		user.FirstName,
 		user.LastName,
@@ -38,6 +40,7 @@ func (u *UserRepository) Create(ctx context.Context, user *User) error {
 		user.Password,
 	).Scan(
 		&user.ID,
+		&user.OrganizationID,
 		&user.CreatedAt,
 		&user.UpdatedAt)
 	if err != nil {
@@ -46,17 +49,19 @@ func (u *UserRepository) Create(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (u *UserRepository) GetById(ctx context.Context, id int64) (*User, error) {
+func (u *UserRepository) GetById(ctx context.Context, id int64, organizationID string) (*User, error) {
 
 	query := `
-	SELECT id, role, first_name, last_name, email
+	SELECT id, organization_id, role, first_name, last_name, email
 	FROM users
 	WHERE id = $1
+		AND organization_id = $2
 	`
 	var currentUser User
 
-	err := u.db.QueryRowContext(ctx, query, id).Scan(
+	err := u.db.QueryRowContext(ctx, query, id, organizationID).Scan(
 		&currentUser.ID,
+		&currentUser.OrganizationID,
 		&currentUser.Role,
 		&currentUser.FirstName,
 		&currentUser.LastName,
@@ -74,13 +79,14 @@ func (u *UserRepository) GetById(ctx context.Context, id int64) (*User, error) {
 	return &currentUser, nil
 }
 
-func (u *UserRepository) GetAll(ctx context.Context) ([]*User, error) {
+func (u *UserRepository) GetAll(ctx context.Context, organizationID string) ([]*User, error) {
 	query := `
-	SELECT id, role, first_name, last_name, email, created_at, updated_at
+	SELECT id, organization_id, role, first_name, last_name, email, created_at, updated_at
 	FROM users
+	WHERE organization_id = $1
 	ORDER BY id
 	`
-	rows, err := u.db.QueryContext(ctx, query)
+	rows, err := u.db.QueryContext(ctx, query, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +97,7 @@ func (u *UserRepository) GetAll(ctx context.Context) ([]*User, error) {
 		var user User
 		err := rows.Scan(
 			&user.ID,
+			&user.OrganizationID,
 			&user.Role,
 			&user.FirstName,
 			&user.LastName,
@@ -109,14 +116,15 @@ func (u *UserRepository) GetAll(ctx context.Context) ([]*User, error) {
 	return users, nil
 }
 
-func (u *UserRepository) Update(ctx context.Context, id int64, role, firstName, lastName, email string, password *string) error {
+func (u *UserRepository) Update(ctx context.Context, id int64, organizationID, role, firstName, lastName, email string, password *string) error {
 	if password != nil {
 		query := `
 		UPDATE users
-		SET role = $1, first_name = $2, last_name = $3, email = $4, password = $5
+		SET role = $1, first_name = $2, last_name = $3, email = $4, password_hash = $5
 		WHERE id = $6
+			AND organization_id = $7
 		`
-		res, err := u.db.ExecContext(ctx, query, role, firstName, lastName, email, *password, id)
+		res, err := u.db.ExecContext(ctx, query, role, firstName, lastName, email, *password, id, organizationID)
 		if err != nil {
 			return err
 		}
@@ -134,8 +142,9 @@ func (u *UserRepository) Update(ctx context.Context, id int64, role, firstName, 
 	UPDATE users
 	SET role = $1, first_name = $2, last_name = $3, email = $4
 	WHERE id = $5
+		AND organization_id = $6
 	`
-	res, err := u.db.ExecContext(ctx, query, role, firstName, lastName, email, id)
+	res, err := u.db.ExecContext(ctx, query, role, firstName, lastName, email, id, organizationID)
 	if err != nil {
 		return err
 	}
@@ -149,8 +158,8 @@ func (u *UserRepository) Update(ctx context.Context, id int64, role, firstName, 
 	return nil
 }
 
-func (u *UserRepository) Delete(ctx context.Context, id int64) error {
-	res, err := u.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id)
+func (u *UserRepository) Delete(ctx context.Context, id int64, organizationID string) error {
+	res, err := u.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1 AND organization_id = $2`, id, organizationID)
 	if err != nil {
 		return err
 	}
@@ -165,9 +174,9 @@ func (u *UserRepository) Delete(ctx context.Context, id int64) error {
 }
 
 func (u *UserRepository) GetByEmailWithPassword(ctx context.Context, email string) (*User, error) {
-	query := `SELECT id, role, email, password FROM users WHERE lower(email) = lower($1)`
+	query := `SELECT id, organization_id, role, email, password_hash FROM users WHERE lower(email) = lower($1)`
 	var currentUser User
-	err := u.db.QueryRowContext(ctx, query, email).Scan(&currentUser.ID, &currentUser.Role, &currentUser.Email, &currentUser.Password)
+	err := u.db.QueryRowContext(ctx, query, email).Scan(&currentUser.ID, &currentUser.OrganizationID, &currentUser.Role, &currentUser.Email, &currentUser.Password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound

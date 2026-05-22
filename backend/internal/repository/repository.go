@@ -14,10 +14,10 @@ var (
 type Repository struct {
 	Users interface {
 		Create(ctx context.Context, user *User) error
-		GetById(ctx context.Context, id int64) (*User, error)
-		GetAll(ctx context.Context) ([]*User, error)
-		Update(ctx context.Context, id int64, role, firstName, lastName, email string, password *string) error
-		Delete(ctx context.Context, id int64) error
+		GetById(ctx context.Context, id int64, organizationID string) (*User, error)
+		GetAll(ctx context.Context, organizationID string) ([]*User, error)
+		Update(ctx context.Context, id int64, organizationID, role, firstName, lastName, email string, password *string) error
+		Delete(ctx context.Context, id int64, organizationID string) error
 		GetByEmailWithPassword(ctx context.Context, email string) (*User, error)
 	}
 	RefreshTokens interface {
@@ -30,15 +30,15 @@ type Repository struct {
 	}
 	Shifts interface {
 		Create(ctx context.Context, shift *Shift) error
-		GetAll(ctx context.Context) ([]*Shift, error)
-		GetAllByAssignedUser(ctx context.Context, userID int64) ([]*Shift, error)
-		GetByID(ctx context.Context, id int64) (*Shift, error)
+		GetAll(ctx context.Context, organizationID string) ([]*Shift, error)
+		GetAllByAssignedUser(ctx context.Context, userID int64, organizationID string) ([]*Shift, error)
+		GetByID(ctx context.Context, id int64, organizationID string) (*Shift, error)
 		Update(ctx context.Context, shift *Shift) error
-		Delete(ctx context.Context, id int64) error
+		Delete(ctx context.Context, id int64, organizationID string) error
 	}
 	Locations interface {
-		GetByID(ctx context.Context, id int64) (*Location, error)
-		ListSummaries(ctx context.Context) ([]LocationSummary, error)
+		GetByID(ctx context.Context, id int64, organizationID string) (*Location, error)
+		ListSummaries(ctx context.Context, organizationID string) ([]LocationSummary, error)
 		Create(ctx context.Context, loc *Location) error
 	}
 }
