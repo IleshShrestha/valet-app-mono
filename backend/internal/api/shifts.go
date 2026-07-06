@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"errors"
@@ -49,7 +49,7 @@ func shiftAssignedToUser(shift *repository.Shift, userID int64) bool {
 	return false
 }
 
-func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) createShiftHandler(w http.ResponseWriter, r *http.Request) {
 
 	var payload CreateShiftPayload
 	if err := readJson(w, r, &payload); err != nil {
@@ -89,7 +89,7 @@ func (app *application) createShiftHandler(w http.ResponseWriter, r *http.Reques
 
 }
 
-func (app *application) getAllShiftsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getAllShiftsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUser := authUserFromCtx(ctx)
 
@@ -111,7 +111,7 @@ func (app *application) getAllShiftsHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (app *application) getShiftHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getShiftHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "shiftId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -139,7 +139,7 @@ func (app *application) getShiftHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (app *application) updateShiftHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) updateShiftHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "shiftId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -188,7 +188,7 @@ func (app *application) updateShiftHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) deleteShiftHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) deleteShiftHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "shiftId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {

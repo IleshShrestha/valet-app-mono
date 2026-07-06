@@ -7,7 +7,7 @@ export async function login(email: string, password: string): Promise<User> {
   const platform = Platform.OS === "ios" || Platform.OS === "android" ? Platform.OS : "web";
   const deviceName = `${platform.toUpperCase()} device`;
 
-  const data = await apiClient.post<LoginResponse>("/auth/login", {
+  const { data } = await apiClient.post<{ data: LoginResponse }>("/auth/login", {
     email,
     password,
     platform,
@@ -22,7 +22,7 @@ export async function refreshAuthToken(): Promise<boolean> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return false;
 
-  const data = await apiClient.post<RefreshResponse>("/auth/refresh", { refresh_token: refreshToken }, { skipAuthRefresh: true });
+  const { data } = await apiClient.post<{ data: RefreshResponse }>("/auth/refresh", { refresh_token: refreshToken }, { skipAuthRefresh: true });
   await saveTokens(data.access_token, data.refresh_token);
   return true;
 }
@@ -47,6 +47,6 @@ export async function logoutAll(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User> {
-  const response = await apiClient.get<{ user: User }>("/auth/me");
-  return response.user;
+  const response = await apiClient.get<{ data: { user: User } }>("/auth/me");
+  return response.data.user;
 }

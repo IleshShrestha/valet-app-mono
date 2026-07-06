@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
     email CITEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (organization_id, id)
+    UNIQUE (organization_id, id),
+    UNIQUE (organization_id, email)
+
 );
 
 CREATE TABLE IF NOT EXISTS locations (

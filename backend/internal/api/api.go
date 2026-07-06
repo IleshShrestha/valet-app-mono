@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"log"
@@ -11,33 +11,27 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-type application struct {
-	config       config
+// Config holds the runtime settings the HTTP layer needs. Environment parsing
+// and dependency construction live in the cmd/api entrypoint.
+type Config struct {
+	Addr string
+	Env  string
+}
+
+type Application struct {
+	config       Config
 	repository   repository.Repository
 	tokenManager *auth.TokenManager
 }
 
-type config struct {
-	addr string
-	db   dbConfig
-	env  string
-	auth authConfig
+// New wires an Application from its already-constructed dependencies. This is
+// the seam the entrypoint and tests use.
+func New(cfg Config, repo repository.Repository, tm *auth.TokenManager) *Application {
+	return &Application{config: cfg, repository: repo, tokenManager: tm}
 }
 
-type authConfig struct {
-	jwtSecret             string
-	accessTokenTTLMinutes int
-	refreshTokenTTLDays   int
-}
-
-type dbConfig struct {
-	addr         string
-	maxOpenConns int
-	maxIdleConns int
-	maxIdleTime  string
-}
-
-func (app *application) mount() http.Handler {
+// Handler builds the fully-routed HTTP handler (middleware + /v1 routes).
+func (app *Application) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.RealIP, middleware.Logger, middleware.Recoverer)
 	r.Route("/v1", func(r chi.Router) {
@@ -66,8 +60,8 @@ func (app *application) mount() http.Handler {
 			r.With(app.requireAuth).Post("/check-location", app.checkLocationHandler)
 			r.Route("/{shiftId}", func(r chi.Router) {
 				r.With(app.requireAuth).Get("/", app.getShiftHandler)
-				r.Put("/", app.updateShiftHandler)
-				r.Delete("/", app.deleteShiftHandler)
+				r.With(app.requireAuth, requireRole("admin")).Put("/", app.updateShiftHandler)
+				r.With(app.requireAuth, requireRole("admin")).Delete("/", app.deleteShiftHandler)
 			})
 		})
 		r.Route("/locations", func(r chi.Router) {
@@ -77,8 +71,9 @@ func (app *application) mount() http.Handler {
 	return r
 }
 
-func (app *application) run(mux http.Handler) error {
-	srv := &http.Server{Addr: app.config.addr, Handler: mux, WriteTimeout: 30 * time.Second, ReadTimeout: 15 * time.Second, IdleTimeout: time.Minute}
-	log.Printf("Listening on %s\n", app.config.addr)
+// Run starts the HTTP server with the provided handler.
+func (app *Application) Run(mux http.Handler) error {
+	srv := &http.Server{Addr: app.config.Addr, Handler: mux, WriteTimeout: 30 * time.Second, ReadTimeout: 15 * time.Second, IdleTimeout: time.Minute}
+	log.Printf("Listening on %s\n", app.config.Addr)
 	return srv.ListenAndServe()
 }
