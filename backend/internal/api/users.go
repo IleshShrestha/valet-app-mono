@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ type UpdateUserPayload struct {
 	Password  *string `json:"password,omitempty" validate:"omitempty,min=8"`
 }
 
-func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	var payload CreateUserPayload
 	if err := readJson(w, r, &payload); err != nil {
 		app.badRequestResponse(w, r, err)
@@ -64,7 +64,7 @@ func (app *application) createUserHandler(w http.ResponseWriter, r *http.Request
 	log.Printf("created user: %s", user.FirstName)
 }
 
-func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	users, err := app.repository.Users.GetAll(ctx, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
@@ -76,7 +76,7 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "userId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -95,14 +95,14 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err := writeJSON(w, http.StatusOK, user); err != nil {
+	if err := app.jsonResponse(w, http.StatusOK, user); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
 
 }
 
-func (app *application) updateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "userId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
@@ -153,7 +153,7 @@ func (app *application) updateUserHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "userId")
 	id, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {

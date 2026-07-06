@@ -1,4 +1,4 @@
-package main
+package repository_test
 
 import (
 	"encoding/json"

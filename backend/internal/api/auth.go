@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email      string `json:"email"`
 		Password   string `json:"password"`
@@ -29,10 +29,10 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	accessToken, _ := app.tokenManager.GenerateAccessToken(u.ID, u.OrganizationID, u.Email, u.Role)
 	rawRefreshToken, _ := auth.GenerateRefreshToken()
 	_ = app.repository.RefreshTokens.CreateRefreshToken(r.Context(), u.ID, auth.HashRefreshToken(rawRefreshToken), req.Platform, req.DeviceName, r.UserAgent(), r.RemoteAddr, time.Now().UTC().Add(app.tokenManager.RefreshTokenTTL()))
-	_ = writeJSON(w, http.StatusOK, map[string]any{"access_token": accessToken, "refresh_token": rawRefreshToken, "user": map[string]any{"id": u.ID, "organization_id": u.OrganizationID, "email": u.Email, "role": u.Role}})
+	_ = app.jsonResponse(w, http.StatusOK, map[string]any{"access_token": accessToken, "refresh_token": rawRefreshToken, "user": map[string]any{"id": u.ID, "organization_id": u.OrganizationID, "email": u.Email, "role": u.Role}})
 }
 
-func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -51,10 +51,10 @@ func (app *application) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	newRaw, _ := auth.GenerateRefreshToken()
 	_ = app.repository.RefreshTokens.CreateRefreshToken(r.Context(), rt.UserID, auth.HashRefreshToken(newRaw), rt.Platform.String, rt.DeviceName.String, r.UserAgent(), r.RemoteAddr, time.Now().UTC().Add(app.tokenManager.RefreshTokenTTL()))
 	accessToken, _ := app.tokenManager.GenerateAccessToken(rt.UserID, rt.UserOrganizationID, rt.UserEmail, rt.UserRole)
-	_ = writeJSON(w, http.StatusOK, map[string]string{"access_token": accessToken, "refresh_token": newRaw})
+	_ = app.jsonResponse(w, http.StatusOK, map[string]string{"access_token": accessToken, "refresh_token": newRaw})
 }
 
-func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -62,14 +62,14 @@ func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if req.RefreshToken != "" {
 		_ = app.repository.RefreshTokens.RevokeRefreshToken(r.Context(), auth.HashRefreshToken(req.RefreshToken))
 	}
-	_ = writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	_ = app.jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 }
-func (app *application) logoutAllHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) logoutAllHandler(w http.ResponseWriter, r *http.Request) {
 	au := authUserFromCtx(r.Context())
 	_ = app.repository.RefreshTokens.RevokeAllRefreshTokensForUser(r.Context(), au.UserID)
-	_ = writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	_ = app.jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 }
-func (app *application) meHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) meHandler(w http.ResponseWriter, r *http.Request) {
 	au := authUserFromCtx(r.Context())
-	_ = writeJSON(w, http.StatusOK, map[string]any{"user": map[string]any{"id": au.UserID, "organization_id": au.OrganizationID, "email": au.Email, "role": au.Role}})
+	_ = app.jsonResponse(w, http.StatusOK, map[string]any{"user": map[string]any{"id": au.UserID, "organization_id": au.OrganizationID, "email": au.Email, "role": au.Role}})
 }

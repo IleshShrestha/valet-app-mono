@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"errors"
@@ -19,14 +19,14 @@ type CreateLocationPayload struct {
 	Latitude  float64 `json:"latitude" validate:"min=-90,max=90"`
 	Longitude float64 `json:"longitude" validate:"min=-180,max=180"`
 	Name      string  `json:"name" validate:"required"`
-	Radius    float64 `json:"radius" validate:"min=-500,max=500"`
+	Radius    float64 `json:"radius" validate:"gt=0,max=500"`
 }
 type checkLocationResponse struct {
 	InsideGeofence bool    `json:"inside_geofence"`
 	DistanceMeters float64 `json:"distance_meters"`
 }
 
-func (app *application) getShiftLocationsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getShiftLocationsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	locations, err := app.repository.Locations.ListSummaries(ctx, authUserFromCtx(ctx).OrganizationID)
 	if err != nil {
@@ -38,7 +38,7 @@ func (app *application) getShiftLocationsHandler(w http.ResponseWriter, r *http.
 	}
 }
 
-func (app *application) checkLocationHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) checkLocationHandler(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(r.Context())
 
 	var payload CheckLocationPayload
@@ -87,7 +87,7 @@ func (app *application) checkLocationHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (app *application) createLocationHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) createLocationHandler(w http.ResponseWriter, r *http.Request) {
 
 	var payload CreateLocationPayload
 	if err := readJson(w, r, &payload); err != nil {

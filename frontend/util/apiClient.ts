@@ -52,7 +52,8 @@ async function refreshAccessToken(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
-    const data = (await parseResponse(response)) as RefreshResponse | null;
+    const parsed = (await parseResponse(response)) as { data?: RefreshResponse } | null;
+    const data = parsed?.data ?? null;
     if (!response.ok || !data?.access_token || !data?.refresh_token) {
       await clearTokens();
       return null;

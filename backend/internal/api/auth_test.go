@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"net/http"
@@ -26,7 +26,7 @@ func TestHashRefreshTokenConsistency(t *testing.T) {
 }
 
 func TestRequireAuthRejectsMissingHeader(t *testing.T) {
-	app := &application{tokenManager: auth.NewTokenManager("secret", 15, 30)}
+	app := &Application{tokenManager: auth.NewTokenManager("secret", 15, 30)}
 	h := app.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
