@@ -35,34 +35,63 @@ CREATE TABLE IF NOT EXISTS locations (
     latitude DOUBLE PRECISION NOT NULL CHECK (latitude BETWEEN -90 AND 90),
     longitude DOUBLE PRECISION NOT NULL CHECK (longitude BETWEEN -180 AND 180),
     radius INTEGER NOT NULL CHECK (radius > 0),
+    billing_type VARCHAR(20) NOT NULL DEFAULT 'hourly_per_person'
+        CHECK (billing_type IN ('hourly_per_person', 'flat_per_shift')),
+    hourly_rate NUMERIC(10,2) CHECK (hourly_rate IS NULL OR hourly_rate >= 0),
+    single_shift_rate NUMERIC(10,2) CHECK (single_shift_rate IS NULL OR single_shift_rate >= 0),
+    double_shift_rate NUMERIC(10,2) CHECK (double_shift_rate IS NULL OR double_shift_rate >= 0),
+    holiday_multiplier NUMERIC(5,2) CHECK (holiday_multiplier IS NULL OR holiday_multiplier >= 0),
+    holiday_flat_bonus NUMERIC(10,2) CHECK (holiday_flat_bonus IS NULL OR holiday_flat_bonus >= 0),
+    uses_holiday_pay BOOLEAN NOT NULL DEFAULT false,
     UNIQUE (organization_id, id),
     UNIQUE (organization_id, name)
 );
 
 COMMENT ON COLUMN locations.radius IS 'Geofence radius in meters';
+COMMENT ON COLUMN locations.billing_type IS 'How this location is invoiced: hourly_per_person or flat_per_shift';
 
-CREATE TABLE IF NOT EXISTS shifts (
+-- A service day is one billable engagement at one location on one date.
+-- It is the unit we invoice; billing rates come from the referenced location.
+CREATE TABLE IF NOT EXISTS service_days (
     id BIGSERIAL PRIMARY KEY,
     organization_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001' REFERENCES organizations(id) ON DELETE RESTRICT,
-    title VARCHAR(255) NOT NULL,
     location_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    service_date DATE NOT NULL,
+    is_holiday BOOLEAN NOT NULL DEFAULT false,
+    holiday_name VARCHAR(255),
+    status VARCHAR(20) NOT NULL DEFAULT 'scheduled'
+        CHECK (status IN ('scheduled', 'in_review', 'completed', 'cancelled')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (organization_id, id),
+    FOREIGN KEY (organization_id, location_id) REFERENCES locations(organization_id, id) ON DELETE RESTRICT
+);
+
+-- A shift segment is one worked block within a service day (e.g. morning or
+-- evening). Single vs double shift is simply the number of segments on the day.
+CREATE TABLE IF NOT EXISTS shift_segments (
+    id BIGSERIAL PRIMARY KEY,
+    organization_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001' REFERENCES organizations(id) ON DELETE RESTRICT,
+    service_day_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
     start_at TIMESTAMPTZ NOT NULL,
     end_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (end_at > start_at),
     UNIQUE (organization_id, id),
-    FOREIGN KEY (organization_id, location_id) REFERENCES locations(organization_id, id) ON DELETE RESTRICT
+    FOREIGN KEY (organization_id, service_day_id) REFERENCES service_days(organization_id, id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS shift_users (
+CREATE TABLE IF NOT EXISTS segment_users (
     organization_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001' REFERENCES organizations(id) ON DELETE RESTRICT,
-    shift_id BIGINT NOT NULL,
+    segment_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     check_in_time TIMESTAMPTZ,
     check_out_time TIMESTAMPTZ,
-    PRIMARY KEY (shift_id, user_id),
-    FOREIGN KEY (organization_id, shift_id) REFERENCES shifts(organization_id, id) ON DELETE CASCADE,
+    PRIMARY KEY (segment_id, user_id),
+    FOREIGN KEY (organization_id, segment_id) REFERENCES shift_segments(organization_id, id) ON DELETE CASCADE,
     FOREIGN KEY (organization_id, user_id) REFERENCES users(organization_id, id) ON DELETE CASCADE
 );
 
@@ -108,20 +137,29 @@ CREATE INDEX IF NOT EXISTS idx_users_organization_id
 CREATE INDEX IF NOT EXISTS idx_locations_organization_id
     ON locations(organization_id);
 
-CREATE INDEX IF NOT EXISTS idx_shifts_organization_id
-    ON shifts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_service_days_organization_id
+    ON service_days(organization_id);
 
-CREATE INDEX IF NOT EXISTS idx_shifts_location_id
-    ON shifts(location_id);
+CREATE INDEX IF NOT EXISTS idx_service_days_location_id
+    ON service_days(location_id);
 
-CREATE INDEX IF NOT EXISTS idx_shift_users_organization_id
-    ON shift_users(organization_id);
+CREATE INDEX IF NOT EXISTS idx_service_days_status_date
+    ON service_days(organization_id, status, service_date);
 
-CREATE INDEX IF NOT EXISTS idx_shift_users_shift_id
-    ON shift_users(shift_id);
+CREATE INDEX IF NOT EXISTS idx_shift_segments_organization_id
+    ON shift_segments(organization_id);
 
-CREATE INDEX IF NOT EXISTS idx_shift_users_user_id
-    ON shift_users(user_id);
+CREATE INDEX IF NOT EXISTS idx_shift_segments_service_day_id
+    ON shift_segments(service_day_id);
+
+CREATE INDEX IF NOT EXISTS idx_segment_users_organization_id
+    ON segment_users(organization_id);
+
+CREATE INDEX IF NOT EXISTS idx_segment_users_segment_id
+    ON segment_users(segment_id);
+
+CREATE INDEX IF NOT EXISTS idx_segment_users_user_id
+    ON segment_users(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_organization_id
     ON refresh_tokens(organization_id);
@@ -144,8 +182,9 @@ CREATE INDEX IF NOT EXISTS idx_auth_events_created_at
 -- +goose Down
 DROP TABLE IF EXISTS auth_events;
 DROP TABLE IF EXISTS refresh_tokens;
-DROP TABLE IF EXISTS shift_users;
-DROP TABLE IF EXISTS shifts;
+DROP TABLE IF EXISTS segment_users;
+DROP TABLE IF EXISTS shift_segments;
+DROP TABLE IF EXISTS service_days;
 DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS organizations;
