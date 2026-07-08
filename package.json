@@ -5,6 +5,9 @@
     "frontend": "cd frontend && npx expo start --tunnel",
     "backend": "cd backend && air",
     "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "check:backend": "cd backend && go vet ./... && go test ./...",
+    "check:frontend": "cd frontend && npm run typecheck",
+    "check": "npm run check:backend && npm run check:frontend"
   }
 }
