@@ -39,15 +39,22 @@ var routeMatrix = []routeCase{
 	{"update user", http.MethodPut, "/v1/users/1", accessAdmin},
 	{"delete user", http.MethodDelete, "/v1/users/1", accessAdmin},
 
-	{"list shifts", http.MethodGet, "/v1/shifts", accessAuth},
-	{"shift locations", http.MethodGet, "/v1/shifts/locations", accessAuth},
-	{"check location", http.MethodPost, "/v1/shifts/check-location", accessAuth},
-	{"get shift", http.MethodGet, "/v1/shifts/1", accessAuth},
-	{"create shift", http.MethodPost, "/v1/shifts", accessAdmin},
-	{"update shift", http.MethodPut, "/v1/shifts/1", accessAdmin},
-	{"delete shift", http.MethodDelete, "/v1/shifts/1", accessAdmin},
+	{"list service-days", http.MethodGet, "/v1/service-days", accessAuth},
+	{"check location", http.MethodPost, "/v1/service-days/check-location", accessAuth},
+	{"get service-day", http.MethodGet, "/v1/service-days/1", accessAuth},
+	{"create service-day", http.MethodPost, "/v1/service-days", accessAdmin},
+	{"update service-day", http.MethodPut, "/v1/service-days/1", accessAdmin},
+	{"delete service-day", http.MethodDelete, "/v1/service-days/1", accessAdmin},
+	{"service-day status", http.MethodPut, "/v1/service-days/1/status", accessAdmin},
+	{"review service-days", http.MethodGet, "/v1/service-days/review", accessAdmin},
 
+	{"list locations", http.MethodGet, "/v1/locations", accessAdmin},
+	{"location summaries", http.MethodGet, "/v1/locations/summaries", accessAuth},
 	{"create location", http.MethodPost, "/v1/locations/", accessAdmin},
+	{"update location", http.MethodPut, "/v1/locations/1", accessAdmin},
+
+	{"invoice service-days", http.MethodGet, "/v1/invoices/service-days", accessAdmin},
+	{"invoice preview", http.MethodPost, "/v1/invoices/preview", accessAdmin},
 }
 
 // Unauthenticated requests must be rejected on every protected route, and

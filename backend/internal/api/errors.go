@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"valet-backend-go/internal/repository"
 )
 
 func (app *Application) internalServerError(w http.ResponseWriter, r *http.Request, err error) {
@@ -21,4 +23,13 @@ func (app *Application) notFoundResponse(w http.ResponseWriter, r *http.Request,
 
 	log.Printf("requested material not found: %s path: %s error %s ", r.Method, r.URL.Path, err)
 	writeJSONError(w, http.StatusNotFound, "not found")
+}
+
+// notFoundOrInternal maps repository.ErrNotFound to 404 and anything else to 500.
+func (app *Application) notFoundOrInternal(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, repository.ErrNotFound) {
+		app.notFoundResponse(w, r, err)
+		return
+	}
+	app.internalServerError(w, r, err)
 }

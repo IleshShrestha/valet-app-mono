@@ -53,19 +53,27 @@ func (app *Application) Handler() http.Handler {
 				r.With(app.requireAuth, requireRole("admin")).Delete("/", app.deleteUserHandler)
 			})
 		})
-		r.Route("/shifts", func(r chi.Router) {
-			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createShiftHandler)
-			r.With(app.requireAuth).Get("/", app.getAllShiftsHandler)
-			r.With(app.requireAuth).Get("/locations", app.getShiftLocationsHandler)
+		r.Route("/service-days", func(r chi.Router) {
+			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createServiceDayHandler)
+			r.With(app.requireAuth).Get("/", app.getAllServiceDaysHandler)
+			r.With(app.requireAuth, requireRole("admin")).Get("/review", app.reviewServiceDaysHandler)
 			r.With(app.requireAuth).Post("/check-location", app.checkLocationHandler)
-			r.Route("/{shiftId}", func(r chi.Router) {
-				r.With(app.requireAuth).Get("/", app.getShiftHandler)
-				r.With(app.requireAuth, requireRole("admin")).Put("/", app.updateShiftHandler)
-				r.With(app.requireAuth, requireRole("admin")).Delete("/", app.deleteShiftHandler)
+			r.Route("/{serviceDayId}", func(r chi.Router) {
+				r.With(app.requireAuth).Get("/", app.getServiceDayHandler)
+				r.With(app.requireAuth, requireRole("admin")).Put("/", app.updateServiceDayHandler)
+				r.With(app.requireAuth, requireRole("admin")).Delete("/", app.deleteServiceDayHandler)
+				r.With(app.requireAuth, requireRole("admin")).Put("/status", app.updateServiceDayStatusHandler)
 			})
 		})
 		r.Route("/locations", func(r chi.Router) {
+			r.With(app.requireAuth, requireRole("admin")).Get("/", app.getAllLocationsHandler)
 			r.With(app.requireAuth, requireRole("admin")).Post("/", app.createLocationHandler)
+			r.With(app.requireAuth).Get("/summaries", app.getLocationSummariesHandler)
+			r.With(app.requireAuth, requireRole("admin")).Put("/{locationId}", app.updateLocationHandler)
+		})
+		r.Route("/invoices", func(r chi.Router) {
+			r.With(app.requireAuth, requireRole("admin")).Get("/service-days", app.getInvoiceServiceDaysHandler)
+			r.With(app.requireAuth, requireRole("admin")).Post("/preview", app.previewInvoiceHandler)
 		})
 	})
 	return r

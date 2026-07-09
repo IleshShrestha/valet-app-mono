@@ -22,31 +22,48 @@ const (
 // Minimal in-memory fakes implementing the repository interfaces so the HTTP
 // layer can be driven end-to-end (router + middleware + handlers) without a DB.
 
-type fakeShiftRepo struct {
-	all            []*repository.Shift
-	assigned       []*repository.Shift
-	byID           *repository.Shift
+type fakeServiceDayRepo struct {
+	all            []*repository.ServiceDay
+	assigned       []*repository.ServiceDay
+	byID           *repository.ServiceDay
+	completed      []*repository.ServiceDay
+	review         []*repository.ServiceDay
 	assignedUserID int64
 	getAllCalled   bool
 }
 
-func (f *fakeShiftRepo) Create(ctx context.Context, shift *repository.Shift) error { return nil }
-func (f *fakeShiftRepo) GetAll(ctx context.Context, organizationID string) ([]*repository.Shift, error) {
+func (f *fakeServiceDayRepo) Create(ctx context.Context, day *repository.ServiceDay) error { return nil }
+func (f *fakeServiceDayRepo) GetAll(ctx context.Context, organizationID string) ([]*repository.ServiceDay, error) {
 	f.getAllCalled = true
 	return f.all, nil
 }
-func (f *fakeShiftRepo) GetAllByAssignedUser(ctx context.Context, userID int64, organizationID string) ([]*repository.Shift, error) {
+func (f *fakeServiceDayRepo) GetAllByAssignedUser(ctx context.Context, userID int64, organizationID string) ([]*repository.ServiceDay, error) {
 	f.assignedUserID = userID
 	return f.assigned, nil
 }
-func (f *fakeShiftRepo) GetByID(ctx context.Context, id int64, organizationID string) (*repository.Shift, error) {
+func (f *fakeServiceDayRepo) GetByID(ctx context.Context, id int64, organizationID string) (*repository.ServiceDay, error) {
 	if f.byID == nil {
 		return nil, repository.ErrNotFound
 	}
 	return f.byID, nil
 }
-func (f *fakeShiftRepo) Update(ctx context.Context, shift *repository.Shift) error { return nil }
-func (f *fakeShiftRepo) Delete(ctx context.Context, id int64, organizationID string) error {
+func (f *fakeServiceDayRepo) Update(ctx context.Context, day *repository.ServiceDay) error { return nil }
+func (f *fakeServiceDayRepo) Delete(ctx context.Context, id int64, organizationID string) error {
+	return nil
+}
+func (f *fakeServiceDayRepo) GetCompletedSince(ctx context.Context, organizationID string, since time.Time) ([]*repository.ServiceDay, error) {
+	return f.completed, nil
+}
+func (f *fakeServiceDayRepo) PromoteEndedToReview(ctx context.Context, organizationID string) error {
+	return nil
+}
+func (f *fakeServiceDayRepo) ListForReview(ctx context.Context, organizationID string) ([]*repository.ServiceDay, error) {
+	return f.review, nil
+}
+func (f *fakeServiceDayRepo) UpdateStatus(ctx context.Context, id int64, organizationID, status string) error {
+	if f.byID == nil {
+		return repository.ErrNotFound
+	}
 	return nil
 }
 
@@ -79,6 +96,7 @@ func (f *fakeUserRepo) GetByEmailWithPassword(ctx context.Context, email string)
 
 type fakeLocationRepo struct {
 	byID      *repository.Location
+	all       []*repository.Location
 	summaries []repository.LocationSummary
 }
 
@@ -88,10 +106,19 @@ func (f *fakeLocationRepo) GetByID(ctx context.Context, id int64, organizationID
 	}
 	return f.byID, nil
 }
+func (f *fakeLocationRepo) GetAll(ctx context.Context, organizationID string) ([]*repository.Location, error) {
+	return f.all, nil
+}
 func (f *fakeLocationRepo) ListSummaries(ctx context.Context, organizationID string) ([]repository.LocationSummary, error) {
 	return f.summaries, nil
 }
 func (f *fakeLocationRepo) Create(ctx context.Context, loc *repository.Location) error { return nil }
+func (f *fakeLocationRepo) UpdateBilling(ctx context.Context, loc *repository.Location) error {
+	if f.byID == nil {
+		return repository.ErrNotFound
+	}
+	return nil
+}
 
 type fakeRefreshTokenRepo struct{}
 
@@ -117,7 +144,7 @@ func (f *fakeRefreshTokenRepo) DeleteExpiredRefreshTokens(ctx context.Context) e
 func emptyRepo() repository.Repository {
 	return repository.Repository{
 		Users:         &fakeUserRepo{},
-		Shifts:        &fakeShiftRepo{},
+		ServiceDays:   &fakeServiceDayRepo{},
 		Locations:     &fakeLocationRepo{},
 		RefreshTokens: &fakeRefreshTokenRepo{},
 	}
