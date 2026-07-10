@@ -6,7 +6,7 @@ import AddLocation from '../screens/AddLocation';
 import AddUser from '../screens/AddUser';
 import Loading from '../screens/Loading';
 import Login from '../screens/Login';
-import ShiftDetails from '../screens/ShiftDetails';
+import ServiceDayDetails from '../screens/ServiceDayDetails';
 import { useAuth } from '../store/Authcontext';
 import type { RootStackParamList } from '../types';
 import BottomTabsNavigator from './BottomTabsNavigator';
@@ -34,7 +34,7 @@ export default function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="BottomTabs" component={BottomTabsNavigator} options={{ headerShown: false }} />
-            <Stack.Screen name="ShiftDetails" component={ShiftDetails} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="ServiceDayDetails" component={ServiceDayDetails} options={{ presentation: 'modal' }} />
             <Stack.Screen name="AddLocation" component={AddLocation} options={{ presentation: 'modal', title: 'Add location' }} />
             <Stack.Screen name="AddUser" component={AddUser} options={{ presentation: 'modal', title: 'Add user' }} />
           </>

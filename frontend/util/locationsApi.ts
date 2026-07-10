@@ -1,4 +1,5 @@
 import type { BillingType, Location, LocationBilling } from "../types/billing";
+import type { PickerOption } from "../types/picker";
 import { apiClient } from "./apiClient";
 
 type ApiRecord = Record<string, unknown>;
@@ -79,4 +80,16 @@ export async function fetchLocations(): Promise<Location[]> {
 export async function updateLocationBilling(id: string, billing: LocationBilling): Promise<Location> {
   const res = await apiClient.put<unknown>(`/locations/${id}`, billingToApiBody(billing));
   return apiRecordToLocation(unwrapData<ApiRecord>(res, {}));
+}
+
+/** GET /locations/summaries — id+name pairs for the location picker. */
+export async function fetchLocationPickerOptions(): Promise<PickerOption[]> {
+  try {
+    const rows = unwrapData<ApiRecord[]>(await apiClient.get<unknown>("/locations/summaries"), []);
+    return (Array.isArray(rows) ? rows : [])
+      .map((o) => ({ label: typeof o.name === "string" ? o.name : "", value: String(o.id ?? "") }))
+      .filter((opt) => opt.value && opt.label);
+  } catch {
+    return [];
+  }
 }

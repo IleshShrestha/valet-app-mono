@@ -2,15 +2,20 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import ShiftList from '../screens/ShiftList';
+import ServiceDayList from '../screens/ServiceDayList';
 import Settings from '../screens/Settings';
 import IconButton from '../components/UI/IconButton';
 import { GlobalStyles } from '../constants/style';
 import type { BottomTabParamList, RootStackParamList } from '../types';
+import { useAuth } from '../store/Authcontext';
+import { isAdmin } from '../auth/permissions';
 
 const BottomTabs = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabsNavigator() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
+
   return (
     <BottomTabs.Navigator
       screenOptions={{
@@ -22,25 +27,27 @@ export default function BottomTabsNavigator() {
       }}
     >
       <BottomTabs.Screen
-        name="ShiftList"
-        component={ShiftList}
+        name="ServiceDays"
+        component={ServiceDayList}
         options={({ navigation }) => ({
-          title: 'Shifts',
+          title: 'Service Days',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar-month" color={color} size={size} />
           ),
-          headerRight: () => (
-            <IconButton
-              icon="add"
-              size={24}
-              color={GlobalStyles.colors.maroon600}
-              onPress={() => {
-                navigation
-                  .getParent<NativeStackNavigationProp<RootStackParamList>>()
-                  ?.navigate({ name: 'ShiftDetails', params: {} });
-              }}
-            />
-          ),
+          headerRight: admin
+            ? () => (
+                <IconButton
+                  icon="add"
+                  size={24}
+                  color={GlobalStyles.colors.maroon600}
+                  onPress={() => {
+                    navigation
+                      .getParent<NativeStackNavigationProp<RootStackParamList>>()
+                      ?.navigate({ name: 'ServiceDayDetails', params: {} });
+                  }}
+                />
+              )
+            : undefined,
         })}
       />
       <BottomTabs.Screen

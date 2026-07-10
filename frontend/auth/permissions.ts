@@ -1,4 +1,3 @@
-import type { Shift } from "../types";
 import type { User } from "../types/auth";
 
 export type AppRole = "worker" | "manager" | "admin";
@@ -56,38 +55,6 @@ export function fullNameFromUser(user: User | null): string | null {
     const ln = u.lastName?.trim() ?? "";
     const combined = [fn, ln].filter(Boolean).join(" ");
     return combined || null;
-}
-
-function normalizeForMatch(s: string): string {
-    return s.trim().toLowerCase();
-}
-
-/** True if shift assignees include this user. Prefer stable ids; names are only a legacy fallback. */
-export function shiftAssignedToUser(shift: Shift, user: User | null): boolean {
-    if (!user) return false;
-
-    const userId = Number(user.id);
-    if (Number.isFinite(userId)) {
-        return shift.assignedUsers.some((assignedUser) => Number(assignedUser.id) === userId);
-    }
-
-    const name = fullNameFromUser(user);
-    if (!name) return false;
-
-    const target = normalizeForMatch(name);
-    return shift.assignedUsers.some((assignedUser) => {
-        const fullName = [assignedUser.firstName, assignedUser.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-        return normalizeForMatch(fullName || assignedUser.email) === target;
-    });
-}
-
-export function filterShiftsForViewer(user: User | null, shifts: Shift[]): Shift[] {
-    if (!user) return [];
-    if (hasAtLeastRole(user, "manager")) return shifts;
-    return shifts.filter((s) => shiftAssignedToUser(s, user));
 }
 
 export function hasRole(user: User | null, ...roles: string[]): boolean {
