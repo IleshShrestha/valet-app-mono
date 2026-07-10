@@ -15,6 +15,7 @@ export type RootStackParamList = {
     ServiceDayDetails: { serviceDayId?: string };
     AddLocation: undefined;
     AddUser: undefined;
+    Invoicing: undefined;
     Login: undefined;
 };
 

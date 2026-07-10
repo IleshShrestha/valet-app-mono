@@ -2,7 +2,7 @@
   "name": "valet-app",
   "private": true,
   "scripts": {
-    "frontend": "cd frontend && npx expo start --tunnel",
+    "frontend": "cd frontend && npx expo start",
     "backend": "cd backend && air",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

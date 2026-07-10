@@ -11,7 +11,7 @@ import { usePermissions } from "../hooks/usePermissions";
 export default function Settings() {
     const navigation = useNavigation();
     const { logout } = useAuth();
-    const { canCreateLocation, canCreateUser } = usePermissions();
+    const { canCreateLocation, canCreateUser, canInvoice } = usePermissions();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     async function handleLogout() {
@@ -38,10 +38,24 @@ export default function Settings() {
             ?.navigate("AddUser");
     }
 
+    function openInvoicing() {
+        navigation
+            .getParent<NativeStackNavigationProp<RootStackParamList>>()
+            ?.navigate("Invoicing");
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Settings</Text>
             <View style={styles.buttonWrap}>
+                {canInvoice ? (
+                    <Button
+                        title="Invoicing"
+                        onPress={openInvoicing}
+                        mode="filled"
+                        style={styles.button}
+                    />
+                ) : null}
                 {canCreateLocation ? (
                     <Button
                         title="Add location"
