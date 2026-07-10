@@ -1,18 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 
-export interface Shift {
-    id: string;
-    title: string;
-    date: Date;
-    timeStart: string;
-    timeEnd: string;
-    locationId: string;
-    location: string;
-
-    assignedUsers: AssignedUser[];
-    assignedUserIds?: number[];
-}
-
 export interface AssignedUser {
     id: number;
     firstName: string;
@@ -25,14 +12,14 @@ export interface AssignedUser {
 
 export type RootStackParamList = {
     BottomTabs: undefined;
-    ShiftDetails: { shiftId?: string };
+    ServiceDayDetails: { serviceDayId?: string };
     AddLocation: undefined;
     AddUser: undefined;
     Login: undefined;
 };
 
 export type BottomTabParamList = {
-    ShiftList: undefined;
+    ServiceDays: undefined;
     Settings: undefined;
 };
 
