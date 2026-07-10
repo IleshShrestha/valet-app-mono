@@ -31,6 +31,8 @@ export type Permissions = {
     canCreateLocation: boolean;
     seesAllShifts: boolean;
     canMutateShifts: boolean;
+    canInvoice: boolean;
+    canManageBilling: boolean;
 };
 
 export function getPermissions(user: User | null): Permissions {
@@ -42,6 +44,8 @@ export function getPermissions(user: User | null): Permissions {
         canCreateLocation: admin,
         seesAllShifts: mgrPlus,
         canMutateShifts: mgrPlus,
+        canInvoice: admin,
+        canManageBilling: admin,
     };
 }
 
