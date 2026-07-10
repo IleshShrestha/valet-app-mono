@@ -16,6 +16,7 @@ export type RootStackParamList = {
     AddLocation: undefined;
     AddUser: undefined;
     Invoicing: undefined;
+    LocationBilling: undefined;
     Login: undefined;
 };
 
