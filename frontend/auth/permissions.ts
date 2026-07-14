@@ -25,51 +25,20 @@ export function hasAtLeastRole(user: User | null, min: AppRole): boolean {
 }
 
 export type Permissions = {
-    canCreateShift: boolean;
     canCreateUser: boolean;
     canCreateLocation: boolean;
-    seesAllShifts: boolean;
-    canMutateShifts: boolean;
     canInvoice: boolean;
     canManageBilling: boolean;
 };
 
 export function getPermissions(user: User | null): Permissions {
-    const mgrPlus = hasAtLeastRole(user, "manager");
     const admin = hasAtLeastRole(user, "admin");
     return {
-        canCreateShift: mgrPlus,
         canCreateUser: admin,
         canCreateLocation: admin,
-        seesAllShifts: mgrPlus,
-        canMutateShifts: mgrPlus,
         canInvoice: admin,
         canManageBilling: admin,
     };
-}
-
-export function fullNameFromUser(user: User | null): string | null {
-    if (!user) return null;
-    const u = user as User & { firstName?: string; lastName?: string };
-    const fn = u.firstName?.trim() ?? "";
-    const ln = u.lastName?.trim() ?? "";
-    const combined = [fn, ln].filter(Boolean).join(" ");
-    return combined || null;
-}
-
-export function hasRole(user: User | null, ...roles: string[]): boolean {
-    if (!user) return false;
-    const n = normalizeRole(user.role);
-    return roles.some((r) => normalizeRole(r) === n);
-}
-
-export function isWorker(user: User | null): boolean {
-    if (!user) return false;
-    return normalizeRole(user.role) === "worker";
-}
-
-export function isManager(user: User | null): boolean {
-    return normalizeRole(user?.role ?? "") === "manager";
 }
 
 export function isAdmin(user: User | null): boolean {
