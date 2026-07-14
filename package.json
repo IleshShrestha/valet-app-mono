@@ -3,11 +3,13 @@
   "private": true,
   "scripts": {
     "frontend": "cd frontend-mobile && npx expo start",
+    "web": "cd frontend-web && npm run dev",
     "backend": "cd backend && air",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "check:backend": "cd backend && go vet ./... && go test ./...",
     "check:frontend": "cd frontend-mobile && npm run typecheck && npm run test",
-    "check": "npm run check:backend && npm run check:frontend"
+    "check:web": "cd frontend-web && npm run typecheck && npm run test && npm run build",
+    "check": "npm run check:backend && npm run check:frontend && npm run check:web"
   }
 }

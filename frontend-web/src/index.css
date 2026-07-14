@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Brand palette mirroring the mobile app (frontend-mobile/constants/style.ts). */
+@theme {
+  --color-maroon-50: #fbf3f3;
+  --color-maroon-100: #f4e1e1;
+  --color-maroon-200: #eac5c5;
+  --color-maroon-300: #dda0a0;
+  --color-maroon-400: #cc7070;
+  --color-maroon-500: #b94545;
+  --color-maroon-600: #a13131;
+  --color-maroon-700: #872828;
+  --color-maroon-800: #702424;
+  --color-maroon-900: #5e2323;
+  --color-maroon-950: #331010;
+  --color-foreground: #030213;
+  --color-destructive: #d4183d;
+}
