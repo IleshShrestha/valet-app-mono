@@ -21,9 +21,7 @@ type routeCase struct {
 	access access
 }
 
-// routeMatrix mirrors the routing table in api.go. Keep it in sync when routes
-// change — a missing/extra entry is exactly the kind of permission regression
-// these tests exist to catch.
+// routeMatrix mirrors the routing table in api.go. Keep it in sync when routes change
 var routeMatrix = []routeCase{
 	{"health", http.MethodGet, "/v1/health", accessPublic},
 	{"login", http.MethodPost, "/v1/auth/login", accessPublic},
