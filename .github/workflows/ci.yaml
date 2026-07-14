@@ -21,11 +21,11 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
-  frontend:
+  frontend-mobile:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend-mobile # <-- confirm this path
+        working-directory: frontend-mobile
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
