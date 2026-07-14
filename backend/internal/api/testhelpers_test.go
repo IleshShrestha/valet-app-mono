@@ -18,7 +18,6 @@ const (
 	testJWTSecret = "test-secret"
 )
 
-// --- Fake repositories ---------------------------------------------------
 // Minimal in-memory fakes implementing the repository interfaces so the HTTP
 // layer can be driven end-to-end (router + middleware + handlers) without a DB.
 

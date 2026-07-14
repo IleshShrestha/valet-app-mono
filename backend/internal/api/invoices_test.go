@@ -11,7 +11,7 @@ import (
 func ptr(v float64) *float64 { return &v }
 
 // End-to-end preview: an hourly location ($35) with a 3-worker, 5-hour segment
-// should invoice at $525 (the spec example), driven through the real route.
+// should invoice at $525, driven through the real route.
 func TestInvoicePreviewComputesTotal(t *testing.T) {
 	dayRepo := &fakeServiceDayRepo{
 		byID: &repository.ServiceDay{

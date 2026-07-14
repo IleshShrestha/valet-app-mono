@@ -27,6 +27,13 @@ func main() {
 	accessTokenTTLMinutes := env.GetInt("ACCESS_TOKEN_TTL_MINUTES")
 	refreshTokenTTLDays := env.GetInt("REFRESH_TOKEN_TTL_DAYS")
 
+	// Comma-separated CORS allow-list for the web client; defaults to common
+	// local dev origins (Vite / Next) when unset.
+	allowedOrigins := splitAndTrim(env.GetString("CORS_ALLOWED_ORIGINS"))
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{"http://localhost:5173", "http://localhost:3000"}
+	}
+
 	if accessTokenTTLMinutes == 0 {
 		accessTokenTTLMinutes = 15
 	}
@@ -49,6 +56,16 @@ func main() {
 	repo := repository.NewRepository(db)
 	tokenManager := auth.NewTokenManager(jwtSecret, accessTokenTTLMinutes, refreshTokenTTLDays)
 
-	app := api.New(api.Config{Addr: addr, Env: environment}, repo, tokenManager)
+	app := api.New(api.Config{Addr: addr, Env: environment, AllowedOrigins: allowedOrigins}, repo, tokenManager)
 	log.Fatal(app.Run(app.Handler()))
+}
+
+func splitAndTrim(s string) []string {
+	out := make([]string, 0)
+	for _, p := range strings.Split(s, ",") {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }

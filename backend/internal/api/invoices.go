@@ -42,8 +42,8 @@ func toServiceDayInput(day *repository.ServiceDay) billing.ServiceDayInput {
 	}
 }
 
-// getInvoiceServiceDaysHandler lists completed service days from the last 2
-// weeks that are eligible to be invoiced.
+// getInvoiceServiceDaysHandler lists completed service days from the last 2 weeks 
+// that are eligible to be invoiced
 func (app *Application) getInvoiceServiceDaysHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	since := time.Now().AddDate(0, 0, -invoiceLookbackDays)

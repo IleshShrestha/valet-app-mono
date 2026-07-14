@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 // Config holds the runtime settings the HTTP layer needs. Environment parsing
@@ -16,6 +17,9 @@ import (
 type Config struct {
 	Addr string
 	Env  string
+	// AllowedOrigins is the CORS allow-list for browser clients (the web app).
+	// Empty means no cross-origin browser requests are permitted.
+	AllowedOrigins []string
 }
 
 type Application struct {
@@ -33,7 +37,17 @@ func New(cfg Config, repo repository.Repository, tm *auth.TokenManager) *Applica
 // Handler builds the fully-routed HTTP handler (middleware + /v1 routes).
 func (app *Application) Handler() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID, middleware.RealIP, middleware.Logger, middleware.Recoverer)
+	r.Use(middleware.RequestID, middleware.RealIP)
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   app.config.AllowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	r.Use(middleware.Logger, middleware.Recoverer)
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/health", app.healthCheckHandler)
 		r.Route("/auth", func(r chi.Router) {
@@ -79,7 +93,6 @@ func (app *Application) Handler() http.Handler {
 	return r
 }
 
-// Run starts the HTTP server with the provided handler.
 func (app *Application) Run(mux http.Handler) error {
 	srv := &http.Server{Addr: app.config.Addr, Handler: mux, WriteTimeout: 30 * time.Second, ReadTimeout: 15 * time.Second, IdleTimeout: time.Minute}
 	log.Printf("Listening on %s\n", app.config.Addr)
