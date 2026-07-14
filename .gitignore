@@ -1,6 +1,6 @@
 # dependencies
 node_modules/
-frontend/node_modules/
+frontend-mobile/node_modules/
 
 # Expo
 .expo/
@@ -15,7 +15,7 @@ backend/tmp/
 # env files
 .env
 .env.local
-frontend/.env
+frontend-mobile/.env
 backend/.env
 
 # OS/editor
