@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173, // keep in sync with backend CORS_ALLOWED_ORIGINS defaults
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })
