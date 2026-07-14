@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import HealthBadge from "./HealthBadge";
+import { useAuth } from "@/auth/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/invoicing", label: "Invoicing" },
@@ -9,6 +10,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
+  const { user, logout } = useAuth();
   return (
     <div className="flex min-h-screen bg-maroon-50 text-foreground">
       <aside className="flex w-56 shrink-0 flex-col border-r border-maroon-200 bg-white">
@@ -35,8 +37,16 @@ export default function Layout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-maroon-200 bg-white px-6 py-3">
           <HealthBadge />
-          {/* User menu lands here in the auth step. */}
-          <span className="text-sm text-gray-500">not signed in</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">{user?.email}</span>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="rounded-md border border-maroon-200 px-3 py-1 text-sm font-medium text-maroon-700 transition-colors hover:bg-maroon-100"
+            >
+              Log out
+            </button>
+          </div>
         </header>
         <main className="flex-1 p-6">
           <Outlet />
